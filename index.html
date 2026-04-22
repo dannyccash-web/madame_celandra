@@ -61,8 +61,6 @@
       </div>
 
       <button class="btn" id="begin-btn">Begin Reading</button>
-
-      <button class="settings-link" id="open-settings">⚙ Configure API key</button>
     </section>
 
     <!-- ══════════════════  2 · QUESTION SCREEN  ══════════════════ -->
@@ -177,29 +175,6 @@
         <button class="btn btn-ghost" id="restart-btn">Begin Again</button>
       </div>
     </section>
-  </div>
-
-  <!-- ══════════════════  SETTINGS MODAL  ══════════════════ -->
-  <div class="modal-backdrop" id="settings-modal" role="dialog" aria-labelledby="settings-title" aria-modal="true">
-    <div class="modal">
-      <h2 id="settings-title">Madame's Crystal Ball</h2>
-      <p>Madame Celandra channels her visions through the Anthropic API. Paste your API key below to begin. It is kept only on this device.</p>
-
-      <label for="api-key-input">Anthropic API key</label>
-      <input type="password" id="api-key-input" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
-      <div class="err" id="api-err"></div>
-
-      <p class="modal-note">
-        Need a key? Create one at
-        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.
-        Your key is stored locally in your browser and sent only to Anthropic when Madame consults the cards.
-      </p>
-
-      <div class="actions">
-        <button class="btn btn-ghost" id="settings-cancel">Cancel</button>
-        <button class="btn" id="settings-save">Save Key</button>
-      </div>
-    </div>
   </div>
 
   <script src="cards.js"></script>

@@ -7,31 +7,11 @@
 
   // ---------- constants ----------
   const POSITIONS = ["The Past", "The Present", "The Future"];
-  const API_URL   = "https://api.anthropic.com/v1/messages";
-  const API_MODEL = "claude-sonnet-4-5-20250929";
-  const API_VER   = "2023-06-01";
-  const STORAGE_KEY = "madame_celandra_api_key_v1";
-
-  // Madame Celandra's voice — used as system prompt
-  const MADAME_SYSTEM = `
-You are Madame Celandra, a mystical tarot reader with a warm, theatrical, old-world air.
-You speak in lyrical prose with hints of velvet and candlelight — poetic but never purple,
-warm but never saccharine. You are wise, observant, and occasionally playful. You address
-the seeker directly with "you". You never break character. You never give medical, legal,
-or financial advice — you speak only of patterns, feelings, and possibilities. When you
-interpret the Rider-Waite-Smith tarot you weave the card's classical symbolism into the
-seeker's question, and you honor reversed cards as a softening, shadow, or inward turn
-of the upright meaning.
-
-Formatting rules:
-- Write in flowing prose. No bullet points. No markdown headers.
-- Use em-dashes and occasional italics (via *asterisks*) for emphasis.
-- Keep each response within the word limit given in the user message.
-  `.trim();
+  // The proxy lives at /api/madame — your API key stays on the server.
+  const MADAME_URL = "/api/madame";
 
   // ---------- state ----------
   const state = {
-    apiKey: null,
     question: "",
     draws: [],           // [{ card, reversed, interpretation }, ...]
     currentDraw: 0,
@@ -76,85 +56,26 @@ Formatting rules:
     return `<span class="thinking" aria-label="thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`;
   }
 
-  // ---------- API key handling ----------
-  function loadKey() {
-    try { state.apiKey = localStorage.getItem(STORAGE_KEY) || null; }
-    catch { state.apiKey = null; }
-  }
-  function saveKey(k) {
-    state.apiKey = k;
-    try { localStorage.setItem(STORAGE_KEY, k); } catch {}
-  }
-  function hasKey() { return !!(state.apiKey && state.apiKey.trim()); }
-
-  // ---------- settings modal ----------
-  function openSettings() {
-    $("#settings-modal").classList.add("active");
-    const input = $("#api-key-input");
-    input.value = state.apiKey || "";
-    $("#api-err").textContent = "";
-    setTimeout(() => input.focus(), 50);
-  }
-  function closeSettings() { $("#settings-modal").classList.remove("active"); }
-
-  function wireSettings() {
-    $("#open-settings").addEventListener("click", openSettings);
-    $("#settings-cancel").addEventListener("click", closeSettings);
-    $("#settings-save").addEventListener("click", () => {
-      const val = $("#api-key-input").value.trim();
-      if (!val) { $("#api-err").textContent = "Please enter a key, or cancel."; return; }
-      if (!val.startsWith("sk-ant-")) {
-        $("#api-err").textContent = "That doesn't look like an Anthropic key (expected sk-ant-…).";
-        return;
-      }
-      saveKey(val);
-      closeSettings();
-    });
-    // Press Esc or tap backdrop to close
-    $("#settings-modal").addEventListener("click", (e) => {
-      if (e.target.id === "settings-modal") closeSettings();
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && $("#settings-modal").classList.contains("active")) closeSettings();
-    });
-  }
-
-  // ---------- Anthropic call ----------
+  // ---------- Anthropic call (via server proxy) ----------
   async function askMadame({ userPrompt, maxTokens = 600 }) {
-    if (!hasKey()) throw new Error("NO_KEY");
-
-    const res = await fetch(API_URL, {
+    const res = await fetch(MADAME_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": state.apiKey,
-        "anthropic-version": API_VER,
-        "anthropic-dangerous-direct-browser-access": "true"
-      },
-      body: JSON.stringify({
-        model: API_MODEL,
-        max_tokens: maxTokens,
-        system: MADAME_SYSTEM,
-        messages: [{ role: "user", content: userPrompt }]
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: userPrompt, max_tokens: maxTokens })
     });
 
     if (!res.ok) {
       let msg = `HTTP ${res.status}`;
       try {
         const errBody = await res.json();
-        if (errBody?.error?.message) msg = errBody.error.message;
+        if (errBody?.error) msg = errBody.error;
       } catch {}
+      if (res.status === 429) msg = "The cards need a moment — too many readings just now. Try again in a bit.";
       throw new Error(msg);
     }
 
     const data = await res.json();
-    const text = (data?.content || [])
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("\n")
-      .trim();
-    return text || "…the cards are silent just now.";
+    return (data?.text || "").trim() || "…the cards are silent just now.";
   }
 
   // Friendly wrapper that streams reply into a bubble element, with fallback on error
@@ -179,9 +100,6 @@ Formatting rules:
   }
 
   function defaultFallback(errMsg) {
-    if (errMsg === "NO_KEY") {
-      return "My crystal clouds over — I need an API key to see clearly. Tap the gear on the start screen to add one, then we shall try again.";
-    }
     return "The veil grows thick tonight — the spirits mutter but do not speak plainly. (" + errMsg + ")";
   }
 
@@ -238,10 +156,6 @@ Formatting rules:
   // 1) start
   function wireStart() {
     $("#begin-btn").addEventListener("click", async () => {
-      if (!hasKey()) {
-        openSettings();
-        return;
-      }
       resetReading();
       await goToQuestion();
     });
@@ -702,16 +616,10 @@ Now weave a single flowing reading that ties these three cards together and spea
 
   // ---------- boot ----------
   function init() {
-    loadKey();
-    wireSettings();
     wireStart();
     wireQuestion();
     wireCardScreen();
     wireSummary();
-    // If no key yet, hint at first visit
-    if (!hasKey()) {
-      console.info("Madame Celandra: add an Anthropic API key via the ⚙ link on the start screen.");
-    }
   }
 
   if (document.readyState === "loading") {
