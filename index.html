@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#120524" />
+  <title>Madame Celandra — a tarot reading</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- jsPDF for client-side PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <div class="stars" aria-hidden="true"></div>
+
+  <div id="app">
+
+    <!-- ══════════════════  1 · START SCREEN  ══════════════════ -->
+    <section id="start-screen" class="screen active" aria-label="Start">
+      <div class="screen-bg start" aria-hidden="true"></div>
+      <div class="logo">
+        <!-- mystical all-seeing-eye logo -->
+        <svg class="eye-glyph" viewBox="0 0 120 120" aria-hidden="true">
+          <defs>
+            <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%"  stop-color="#ffd87a" stop-opacity="0.9"/>
+              <stop offset="60%" stop-color="#d9b44a" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#120524" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <!-- rays -->
+          <g stroke="#d9b44a" stroke-width="1.2" opacity="0.7">
+            <line x1="60" y1="6"   x2="60" y2="18"/>
+            <line x1="60" y1="102" x2="60" y2="114"/>
+            <line x1="6"  y1="60"  x2="18" y2="60"/>
+            <line x1="102" y1="60" x2="114" y2="60"/>
+            <line x1="20" y1="20"  x2="30" y2="30"/>
+            <line x1="100" y1="20" x2="90" y2="30"/>
+            <line x1="20" y1="100" x2="30" y2="90"/>
+            <line x1="100" y1="100" x2="90" y2="90"/>
+          </g>
+          <!-- outer circle -->
+          <circle cx="60" cy="60" r="42" fill="url(#eyeGlow)"/>
+          <circle cx="60" cy="60" r="42" fill="none" stroke="#d9b44a" stroke-width="1.5"/>
+          <!-- eye shape -->
+          <path d="M24,60 Q60,28 96,60 Q60,92 24,60 Z" fill="#120524" stroke="#d9b44a" stroke-width="2"/>
+          <!-- iris -->
+          <circle cx="60" cy="60" r="12" fill="#6c3ea8" stroke="#d9b44a" stroke-width="1.5"/>
+          <!-- pupil -->
+          <circle cx="60" cy="60" r="5" fill="#120524"/>
+          <!-- highlight -->
+          <circle cx="64" cy="56" r="1.8" fill="#ffd87a"/>
+          <!-- stars around -->
+          <g fill="#ffd87a" opacity="0.8">
+            <polygon points="60,24 61,27 64,27 62,29 63,32 60,30 57,32 58,29 56,27 59,27"/>
+            <polygon points="60,96 61,93 64,93 62,91 63,88 60,90 57,88 58,91 56,93 59,93"/>
+          </g>
+        </svg>
+        <div class="title">Madame<br/>Celandra</div>
+        <div class="subtitle">— a tarot reading —</div>
+      </div>
+
+      <button class="btn" id="begin-btn">Begin Reading</button>
+
+      <button class="settings-link" id="open-settings">⚙ Configure API key</button>
+    </section>
+
+    <!-- ══════════════════  2 · QUESTION SCREEN  ══════════════════ -->
+    <section id="question-screen" class="screen" aria-label="Your question">
+      <h1>What weighs upon your heart?</h1>
+      <div class="ornament">✦ ✦ ✦</div>
+
+      <div class="madame">
+        <div class="avatar" aria-hidden="true"></div>
+        <div>
+          <div class="name">Madame Celandra</div>
+          <div class="bubble" id="madame-intro"></div>
+        </div>
+      </div>
+
+      <div class="q-input-wrap" id="q-input-wrap">
+        <textarea id="question-input"
+                  placeholder="Type your question, worry, or curiosity…"
+                  maxlength="800"
+                  aria-label="Your question"></textarea>
+        <div class="btn-row">
+          <button class="btn" id="ask-btn">Ask Madame Celandra</button>
+        </div>
+      </div>
+
+      <!-- shown after she responds -->
+      <div class="shuffle-stage" id="shuffle-stage" aria-hidden="true">
+        <div class="shuffle-card" style="animation-delay: 0s"></div>
+        <div class="shuffle-card" style="animation-delay: -0.4s"></div>
+        <div class="shuffle-card" style="animation-delay: -0.8s"></div>
+        <div class="shuffle-card" style="animation-delay: -1.2s"></div>
+        <div class="shuffle-card" style="animation-delay: -1.6s"></div>
+        <div class="shuffle-card" style="animation-delay: -2.0s"></div>
+        <div class="shuffle-card" style="animation-delay: -2.4s"></div>
+        <div class="shuffle-card" style="animation-delay: -2.8s"></div>
+      </div>
+
+      <div class="btn-row" id="continue-to-cards-row" style="display:none; margin-top: 10px;">
+        <button class="btn" id="continue-to-cards">Continue to the Cards</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════  3 · CARD SELECT SCREEN  ══════════════════ -->
+    <section id="card-screen" class="screen" aria-label="Card selection">
+      <div class="screen-bg select" aria-hidden="true"></div>
+      <h2 id="card-heading">The Past</h2>
+
+      <div class="drawn-row" id="drawn-dots" aria-hidden="true">
+        <span class="drawn-dot"></span>
+        <span class="drawn-dot"></span>
+        <span class="drawn-dot"></span>
+      </div>
+
+      <div class="card-table">
+        <!-- the deck (before pick) -->
+        <div class="pick-prompt" id="pick-prompt">
+          Tap the deck to draw your card
+          <span class="step-count" id="step-count">Card 1 of 3 · The Past</span>
+        </div>
+
+        <div class="deck idle" id="deck" role="button" tabindex="0" aria-label="Draw a card">
+          <div class="stack s1"></div>
+          <div class="stack s2"></div>
+          <div class="stack s3"></div>
+        </div>
+
+        <!-- the drawn card (after pick) -->
+        <div class="card" id="drawn-card" style="display:none;">
+          <div class="card-inner">
+            <div class="card-face card-back" aria-hidden="true"></div>
+            <div class="card-face card-front" id="drawn-card-front">
+              <!-- image or fallback injected by JS -->
+              <div class="card-name" id="drawn-card-name"></div>
+              <div class="reversed-tag">Reversed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="madame" id="card-interp-wrap" style="display:none;">
+        <div class="avatar" aria-hidden="true"></div>
+        <div>
+          <div class="name">Madame Celandra</div>
+          <div class="bubble" id="card-interp"></div>
+        </div>
+      </div>
+
+      <div class="btn-row" id="card-continue-row" style="display:none;">
+        <button class="btn" id="card-continue-btn">Continue</button>
+      </div>
+    </section>
+
+    <!-- ══════════════════  4 · SUMMARY SCREEN  ══════════════════ -->
+    <section id="summary-screen" class="screen" aria-label="Your reading">
+      <h1>Your Reading</h1>
+      <div class="ornament">✦ ✦ ✦</div>
+
+      <div class="cards-row" id="summary-cards"></div>
+
+      <div class="madame">
+        <div class="avatar" aria-hidden="true"></div>
+        <div>
+          <div class="name">Madame Celandra</div>
+          <div class="bubble" id="summary-intro-line">She weaves the threads together…</div>
+        </div>
+      </div>
+
+      <div class="reading-text" id="summary-text"></div>
+
+      <div class="btn-row" style="margin-top: 16px;">
+        <button class="btn" id="download-btn">Download as PDF</button>
+        <button class="btn btn-ghost" id="restart-btn">Begin Again</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- ══════════════════  SETTINGS MODAL  ══════════════════ -->
+  <div class="modal-backdrop" id="settings-modal" role="dialog" aria-labelledby="settings-title" aria-modal="true">
+    <div class="modal">
+      <h2 id="settings-title">Madame's Crystal Ball</h2>
+      <p>Madame Celandra channels her visions through the Anthropic API. Paste your API key below to begin. It is kept only on this device.</p>
+
+      <label for="api-key-input">Anthropic API key</label>
+      <input type="password" id="api-key-input" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
+      <div class="err" id="api-err"></div>
+
+      <p class="modal-note">
+        Need a key? Create one at
+        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.
+        Your key is stored locally in your browser and sent only to Anthropic when Madame consults the cards.
+      </p>
+
+      <div class="actions">
+        <button class="btn btn-ghost" id="settings-cancel">Cancel</button>
+        <button class="btn" id="settings-save">Save Key</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="cards.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
