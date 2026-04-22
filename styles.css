@@ -49,16 +49,25 @@ body {
   min-height: 100dvh;
 }
 
-/* screen-specific backdrops layered behind content */
+/* screen-specific backdrops layered behind content
+   — on portrait (mobile) fill the height; on landscape (laptop/desktop) fill the width.
+   Any gap that opens up on unusual aspect ratios is filled by the body's purple gradient. */
 .screen > .screen-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-size: cover;
+  background-repeat: no-repeat;
+  background-size: auto 100%;          /* portrait default — fill height */
   background-position: center;
   opacity: 0;
   transition: opacity 0.8s ease;
+}
+@media (orientation: landscape) {
+  .screen > .screen-bg {
+    background-size: 100% auto;        /* laptop/desktop — fill width */
+    background-position: center top;
+  }
 }
 .screen.active > .screen-bg { opacity: 1; }
 .screen > .screen-bg::after {
@@ -515,20 +524,33 @@ em { color: var(--gold-bright); font-style: italic; }
   object-fit: cover;
   display: block;
 }
-.card-front .card-name {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 6px 8px;
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  color: var(--gold-bright);
-  background: linear-gradient(180deg, transparent, rgba(18, 5, 36, 0.85));
+/* ── Card label (below the drawn card, never on top of it) ── */
+.card-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 4px auto 0;
   text-align: center;
-  text-transform: uppercase;
 }
+.card-label .cl-name {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  color: var(--gold-bright);
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(217, 180, 74, 0.35);
+}
+.card-label .cl-rev {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: rgba(255, 216, 122, 0.75);
+  letter-spacing: 0.16em;
+  text-transform: lowercase;
+  display: none;
+}
+.card-label.is-reversed .cl-rev { display: inline; }
 /* fallback when image fails: stylized placeholder */
 .card-front.fallback {
   background:
@@ -557,22 +579,8 @@ em { color: var(--gold-bright); font-style: italic; }
   letter-spacing: 0.1em;
 }
 
-.card .reversed-tag {
-  display: none;
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(18, 5, 36, 0.85);
-  color: var(--gold);
-  font-family: var(--font-display);
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
-  padding: 3px 8px;
-  border: 1px solid var(--gold);
-  border-radius: 2px;
-  transform: rotate(180deg);
-}
-.card.reversed .reversed-tag { display: block; }
+/* legacy .reversed-tag overlay has been removed; the reversed indicator
+   now lives below the card on .card-label */
 
 /* drawn cards summary row */
 .drawn-row {
@@ -648,66 +656,18 @@ em { color: var(--gold-bright); font-style: italic; }
 #summary-screen .reading-text::-webkit-scrollbar-track { background: transparent; }
 #summary-screen .reading-text::-webkit-scrollbar-thumb { background: rgba(217, 180, 74, 0.35); border-radius: 4px; }
 
-/* ── Settings modal ───────────────────────────────────────── */
-.modal-backdrop {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(10, 2, 24, 0.85);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 50;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.modal-backdrop.active { display: flex; }
-.modal {
-  background: linear-gradient(180deg, #22084a, #120524);
-  border: 1.5px solid var(--gold);
-  border-radius: 6px;
-  padding: 22px 20px;
-  max-width: 420px;
+/* ── One-reading-per-day gate on the start screen ─────────── */
+#start-screen > .gate-wrap {
+  position: relative;
+  z-index: 2;
+  max-width: 460px;
   width: 100%;
-  box-shadow: 0 0 32px rgba(217, 180, 74, 0.3);
+  margin: 18px auto 0;
+  animation: fadeIn 0.7s ease both;
 }
-.modal h2 { margin-bottom: 8px; }
-.modal p  { font-size: 0.95rem; color: var(--parchment); }
-.modal label {
-  display: block;
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  letter-spacing: 0.2em;
-  color: var(--gold);
-  margin: 14px 0 6px;
-  text-transform: uppercase;
+#start-screen > .gate-wrap .madame {
+  margin: 0;
 }
-.modal input[type="password"], .modal input[type="text"] {
-  width: 100%;
-  padding: 10px 12px;
-  font-family: "Menlo", "Consolas", monospace;
-  font-size: 0.9rem;
-  color: var(--parchment);
-  background: rgba(18, 5, 36, 0.8);
-  border: 1px solid rgba(217, 180, 74, 0.5);
-  border-radius: 3px;
-  outline: none;
-}
-.modal input:focus { border-color: var(--gold); }
-.modal .actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
-.modal .err {
-  color: var(--danger);
-  font-size: 0.85rem;
-  margin-top: 6px;
-  min-height: 1em;
-}
-.modal-note {
-  font-size: 0.82rem;
-  color: rgba(243, 231, 200, 0.7);
-  line-height: 1.4;
-  margin-top: 8px;
-}
-.modal-note a { color: var(--gold-bright); }
 
 /* ── loading indicator ────────────────────────────────────── */
 .thinking {

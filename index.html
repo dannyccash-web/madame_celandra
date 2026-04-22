@@ -61,6 +61,17 @@
       </div>
 
       <button class="btn" id="begin-btn">Begin Reading</button>
+
+      <!-- Shown only when the seeker has already had a reading today -->
+      <div class="gate-wrap" id="start-gate" style="display:none;">
+        <div class="madame">
+          <div class="avatar" aria-hidden="true"></div>
+          <div>
+            <div class="name">Madame Celandra</div>
+            <div class="bubble" id="gate-message"></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ══════════════════  2 · QUESTION SCREEN  ══════════════════ -->
@@ -132,11 +143,15 @@
           <div class="card-inner">
             <div class="card-face card-back" aria-hidden="true"></div>
             <div class="card-face card-front" id="drawn-card-front">
-              <!-- image or fallback injected by JS -->
-              <div class="card-name" id="drawn-card-name"></div>
-              <div class="reversed-tag">Reversed</div>
+              <!-- image or fallback injected by JS — no overlays -->
             </div>
           </div>
+        </div>
+
+        <!-- name + reversed indicator sit BELOW the card so nothing obscures the art -->
+        <div class="card-label" id="drawn-card-label" style="display:none;">
+          <span class="cl-name"></span>
+          <span class="cl-rev">reversed</span>
         </div>
       </div>
 

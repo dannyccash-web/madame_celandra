@@ -9,6 +9,8 @@
   const POSITIONS = ["The Past", "The Present", "The Future"];
   // The proxy lives at /api/madame — your API key stays on the server.
   const MADAME_URL = "/api/madame";
+  // One reading per day — track the local date of the last completed reading.
+  const LAST_READING_KEY = "madame_last_reading_date";
 
   // ---------- state ----------
   const state = {
@@ -54,6 +56,45 @@
 
   function thinkingHTML() {
     return `<span class="thinking" aria-label="thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`;
+  }
+
+  // ---------- one-reading-per-day gate ----------
+  // Use the seeker's local calendar date (YYYY-MM-DD). If they've already had
+  // a reading today, the Begin button is hidden and Madame speaks in-character
+  // about returning tomorrow.
+  function todayLocalISO() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+  function lastReadingDate() {
+    try { return localStorage.getItem(LAST_READING_KEY) || null; }
+    catch { return null; }
+  }
+  function markReadingCompleteToday() {
+    try { localStorage.setItem(LAST_READING_KEY, todayLocalISO()); }
+    catch { /* private mode, etc. — gate silently disabled */ }
+  }
+  function hasReadingToday() {
+    return lastReadingDate() === todayLocalISO();
+  }
+  function applyStartGate() {
+    const gate   = $("#start-gate");
+    const gateMsg = $("#gate-message");
+    const beginBtn = $("#begin-btn");
+    if (!gate || !beginBtn) return;
+    if (hasReadingToday()) {
+      beginBtn.style.display = "none";
+      gate.style.display = "block";
+      gateMsg.textContent =
+        "The cards have already spoken for you today, dear one. Their voices grow quiet once a reading has been given — they must rest, and so must you. Return to me tomorrow, when the veil has turned again, and we shall see what new light the deck carries.";
+    } else {
+      beginBtn.style.display = "";
+      gate.style.display = "none";
+      if (gateMsg) gateMsg.textContent = "";
+    }
   }
 
   // ---------- Anthropic call (via server proxy) ----------
@@ -114,7 +155,10 @@
   }
 
   // ---------- rendering a drawn card face ----------
-  function renderCardFace(frontEl, card, { withName = true } = {}) {
+  // The card face shows ONLY the art (or a stylized fallback). The card name
+  // and any reversed indicator are rendered in labels outside the card so
+  // they never obscure the image.
+  function renderCardFace(frontEl, card) {
     frontEl.classList.remove("fallback");
     frontEl.innerHTML = "";
     const img = document.createElement("img");
@@ -122,24 +166,15 @@
     img.alt = card.name;
     img.referrerPolicy = "no-referrer";
     img.onerror = () => {
-      // Fallback to stylized placeholder
+      // Art wouldn't load — stylized placeholder (still image-only, no overlaid name)
       frontEl.classList.add("fallback");
       frontEl.innerHTML = `
         <div class="ph">
           <div class="sym">${suitSymbol(card.suit)}</div>
-          <div class="nm">${card.name}</div>
         </div>
       `;
-      if (withName) addCardNameLabel(frontEl, card.name);
     };
     frontEl.appendChild(img);
-    if (withName) addCardNameLabel(frontEl, card.name);
-  }
-  function addCardNameLabel(frontEl, name) {
-    const label = document.createElement("div");
-    label.className = "card-name";
-    label.textContent = name;
-    frontEl.appendChild(label);
   }
   function suitSymbol(suit) {
     switch (suit) {
@@ -156,6 +191,11 @@
   // 1) start
   function wireStart() {
     $("#begin-btn").addEventListener("click", async () => {
+      // Re-check at click time in case midnight rolled over mid-session.
+      if (hasReadingToday()) {
+        applyStartGate();
+        return;
+      }
       resetReading();
       await goToQuestion();
     });
@@ -235,6 +275,12 @@
     $("#pick-prompt").style.display = "block";
     $("#drawn-card").style.display = "none";
     $("#drawn-card").classList.remove("flipped", "reversed");
+    const label = $("#drawn-card-label");
+    if (label) {
+      label.style.display = "none";
+      label.classList.remove("is-reversed");
+      label.querySelector(".cl-name").textContent = "";
+    }
     $("#card-interp-wrap").style.display = "none";
     $("#card-continue-row").style.display = "none";
     $("#card-interp").textContent = "";
@@ -266,15 +312,9 @@
     const { card, reversed } = drawRandomCard();
     state.draws.push({ card, reversed, interpretation: "" });
 
-    // render the card face (still on back)
+    // render the card face — art only, no overlays
     const frontEl = $("#drawn-card-front");
-    // clear existing content but keep our static children (name + reversed-tag) after rebuild
-    // We rebuild fully via renderCardFace — then reattach the reversed-tag.
-    renderCardFace(frontEl, card, { withName: true });
-    const revTag = document.createElement("div");
-    revTag.className = "reversed-tag";
-    revTag.textContent = "Reversed";
-    frontEl.appendChild(revTag);
+    renderCardFace(frontEl, card);
 
     // hide deck, show card (still showing back)
     deck.classList.remove("idle");
@@ -288,6 +328,12 @@
     await sleep(300);
     if (reversed) cardEl.classList.add("reversed");
     cardEl.classList.add("flipped");
+
+    // populate and reveal the label below the card (never on top of it)
+    const labelEl = $("#drawn-card-label");
+    labelEl.querySelector(".cl-name").textContent = card.name;
+    labelEl.classList.toggle("is-reversed", reversed);
+    labelEl.style.display = "flex";
 
     // after flip, show Madame's interpretation
     await sleep(950);
@@ -329,7 +375,7 @@
     }).join("\n");
 
     const prompt = `
-The seeker's question was:
+The seeker came to you tonight with this exact question, in their own words:
 
 """${state.question}"""
 
@@ -340,7 +386,13 @@ ${cardSummary}
 For reference, your prior single-card readings were:
 ${state.draws.map((d, i) => `\n${POSITIONS[i]} — ${d.card.name} (${d.reversed ? "reversed" : "upright"}):\n${d.interpretation}`).join("\n")}
 
-Now weave a single flowing reading that ties these three cards together and speaks directly to the seeker's question. Move from past, through present, to future, naming each card as you arrive at it. Close with a gentle, grounded piece of counsel — something the seeker can carry with them. Aim for about 280–350 words. Write in flowing prose. No headers or bullets.
+Now give this seeker a final reading that is unmistakably about THIS question and THIS spread — never a stock tarot summary that could be pasted into any other reading.
+
+Begin by naming, in your own words, what you heard them ask — the specific situation, the particular feeling or stake. That thread must run through every sentence that follows. Then move through the cards in order — past, present, future — naming each one as you arrive at it and showing how its symbolism speaks to the particular circumstance they brought you. The three cards should build on each other, not stand apart.
+
+Close with one piece of counsel that DIRECTLY answers or addresses their concern. Not vague "honor the pattern" wisdom — a concrete, grounded suggestion that only makes sense in the context of what they asked. If their question was a decision, lean toward one direction while honoring their agency. If it was a worry, name what to watch for. If it was a longing, name what it's asking of them.
+
+Write in flowing prose, about 280–350 words. No headers, no bullets, no canned tarot platitudes ("patterns not prophecy", "the cards reveal", "trust the journey"). Speak as Madame Celandra would: warm, lyrical, specific.
     `.trim();
 
     $("#summary-intro-line").textContent = "She weaves the threads together…";
@@ -353,15 +405,20 @@ Now weave a single flowing reading that ties these three cards together and spea
       }
     );
     state.summary = text;
+    // The reading has now been delivered — lock this seeker out for the rest of the day.
+    markReadingCompleteToday();
   }
 
   function buildFallbackSummary() {
+    // Only fires when the proxy is unreachable. Keep it brief and honest
+    // rather than dressing up a generic reading that wouldn't answer the
+    // seeker's question anyway.
     const lines = state.draws.map((d, i) => {
       const o = d.reversed ? "reversed" : "upright";
       const m = d.reversed ? d.card.reversed : d.card.upright;
       return `${POSITIONS[i]} — *${d.card.name}* (${o}): ${m}.`;
     }).join("\n\n");
-    return `The three cards stand before us:\n\n${lines}\n\nTaken together, they ask you to honor where you have been, attend to where you now stand, and keep your gaze soft — not fixed — on what is forming. The cards offer pattern, not prophecy. Carry what feels true; leave the rest at the edge of the table.`;
+    return `The veil is thick tonight and my words do not travel far. Still — I will not send you away empty-handed. Your cards stand thus:\n\n${lines}\n\nSit with them a moment, and return to me when the mist has lifted, so that I may speak of your question in full.`;
   }
 
   function renderSummaryCards() {
@@ -380,7 +437,7 @@ Now weave a single flowing reading that ties these three cards together and spea
         </div>
       `;
       const front = cardWrap.querySelector(".card-front");
-      renderCardFace(front, d.card, { withName: true });
+      renderCardFace(front, d.card);
 
       const pos = document.createElement("div");
       pos.className = "position";
@@ -400,6 +457,7 @@ Now weave a single flowing reading that ties these three cards together and spea
   function wireSummary() {
     $("#restart-btn").addEventListener("click", () => {
       resetReading();
+      applyStartGate();            // they've read today — the gate will now be showing
       showScreen("start-screen");
     });
     $("#download-btn").addEventListener("click", downloadPDF);
@@ -620,6 +678,7 @@ Now weave a single flowing reading that ties these three cards together and spea
     wireQuestion();
     wireCardScreen();
     wireSummary();
+    applyStartGate();
   }
 
   if (document.readyState === "loading") {
