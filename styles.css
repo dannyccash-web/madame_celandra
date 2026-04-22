@@ -191,6 +191,25 @@ em { color: var(--gold-bright); font-style: italic; }
   text-align: center;
   gap: 18px;
 }
+#start-screen > .madame-portrait {
+  position: absolute;
+  right: -6%;
+  bottom: 0;
+  height: 78%;
+  max-height: 640px;
+  width: auto;
+  z-index: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 0 32px rgba(0, 0, 0, 0.55));
+  animation: portraitFade 1.4s ease 0.2s both;
+}
+@keyframes portraitFade {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (max-width: 520px) {
+  #start-screen > .madame-portrait { right: -18%; height: 62%; opacity: 0.85; }
+}
 .logo {
   display: flex;
   flex-direction: column;
@@ -254,21 +273,12 @@ em { color: var(--gold-bright); font-style: italic; }
   height: 64px;
   border-radius: 50%;
   background:
+    url("madame_celandre.png") top center / 180% auto no-repeat,
     radial-gradient(circle at 30% 30%, #e5d6b0, #a07c4f 60%, #3a1f12 100%);
   border: 2px solid var(--gold);
   box-shadow: 0 0 14px rgba(217, 180, 74, 0.4);
   position: relative;
   overflow: hidden;
-}
-.madame .avatar::after {
-  content: "✦";
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 28px;
-  color: rgba(18, 5, 36, 0.85);
-  font-family: var(--font-display);
 }
 .madame .bubble {
   flex: 1;
@@ -375,20 +385,23 @@ em { color: var(--gold-bright); font-style: italic; }
   align-items: center;
   justify-content: center;
   gap: 18px;
-  padding: 20px 0;
+  padding: 20px 0 60px;
   position: relative;
 }
-.card-table::before {
-  /* purple felt — translucent so the parlor backdrop shows through softly */
+/* The actual tarot-table image — sits behind the deck/card */
+.card-table::after {
   content: "";
   position: absolute;
-  inset: 0;
-  margin: 0 -20px;
-  background:
-    radial-gradient(ellipse at 50% 55%, rgba(74, 26, 138, 0.55) 0%, rgba(43, 11, 88, 0.7) 55%, rgba(21, 4, 46, 0.9) 100%);
-  border-radius: 32px;
-  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.55);
+  left: 50%;
+  bottom: 0;
+  width: 115%;
+  max-width: 520px;
+  aspect-ratio: 12 / 7;
+  transform: translateX(-50%);
+  background: url("madame_celandra_table.png") center bottom / contain no-repeat;
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.55));
   z-index: -1;
+  pointer-events: none;
 }
 
 .pick-prompt {
