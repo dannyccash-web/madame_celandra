@@ -186,6 +186,27 @@
     }
   }
 
+  // ---------- position / orientation guidance ----------
+  // These feed into the per-card prompt so every reading leans on *where*
+  // the card sits in the spread, not just what the card classically means.
+  function positionGuidance(pos) {
+    switch (pos) {
+      case "The Past":
+        return "THE PAST is the soil: speak of what has already shaped the seeker — habits, old choices, inherited weather, the mood they walked in with. Not nostalgia — the roots of the question.";
+      case "The Present":
+        return "THE PRESENT is the crossing: speak of what is alive in them right now — the pressure, the tension, the current they are standing in as they ask. This is the card that meets them where they are.";
+      case "The Future":
+        return "THE FUTURE is what is forming, not prophecy: speak of the direction the present is leaning toward if the seeker keeps walking as they are. A possibility, a tendency, a weather front — not a verdict.";
+      default:
+        return "";
+    }
+  }
+  function orientationGuidance(reversed) {
+    return reversed
+      ? "The card is REVERSED — its force is softened, delayed, turned inward, partly blocked, or expressed shadow-side. Thread that specific quality through the reading. Do not give the upright meaning with a caveat; speak the reversed meaning on its own terms."
+      : "The card is UPRIGHT — its force arrives directly, in its native voice. Let that clarity be felt.";
+  }
+
   // ---------- screen-specific wiring ----------
 
   // 1) start
@@ -340,12 +361,38 @@
     $("#card-interp-wrap").style.display = "flex";
     const pos = POSITIONS[state.currentDraw];
     const orient = reversed ? "reversed" : "upright";
+    const classical = reversed ? card.reversed : card.upright;
+
+    const cardPrompt = `
+The seeker's question, in their own words:
+"""${state.question}"""
+
+They have just turned a single card for the position of ${pos}.
+Card: ${card.name}
+Orientation: ${orient}
+Classical ${orient} meaning: ${classical}.
+
+${positionGuidance(pos)}
+
+${orientationGuidance(reversed)}
+
+Give a short interpretation — about 70–90 words, flowing prose. It must be unmistakably specific to ALL FOUR of these variables together:
+  1. the seeker's particular question,
+  2. the position "${pos}" (not a generic reading of the card),
+  3. the ${orient} orientation (lean hard on this; an upright ${card.name} and a reversed ${card.name} must read very differently),
+  4. this card's own symbolism.
+
+Do NOT close with a stock benediction. Banned phrases and patterns include: "trust the journey", "honor the pattern", "the cards reveal", "the universe whispers", "may you find", "remember to", "take this as". Your final sentence must belong uniquely to THIS card + position + orientation + question — if it could be swapped into any other reading unchanged, rewrite it.
+
+Do not forecast or mention the other two cards — they have not been drawn yet.
+    `.trim();
+
     const interp = await madameSays(
       $("#card-interp"),
-      `The seeker asked:\n\n"""${state.question}"""\n\nFor the position of **${pos}**, they drew **${card.name}** (${orient}).\n\nClassical meaning — ${orient === "upright" ? "upright" : "reversed"}: ${orient === "upright" ? card.upright : card.reversed}.\n\nInterpret this single card in this position, relating it to their question. Keep it to about 80 words. Do not yet give the full three-card synthesis — you will do that later.`,
+      cardPrompt,
       {
         maxTokens: 400,
-        fallback: `The ${card.name}${reversed ? ", turned on its head," : ""} whispers of ${orient === "upright" ? card.upright : card.reversed}. In the place of ${pos.toLowerCase()}, this speaks quietly to what you carry — ${reversed ? "softened, inward, still gathering" : "direct, and close enough to touch"}.`
+        fallback: singleCardFallback({ card, reversed, pos, classical })
       }
     );
     state.draws[state.draws.length - 1].interpretation = interp;
@@ -407,6 +454,26 @@ Write in flowing prose, about 280–350 words. No headers, no bullets, no canned
     state.summary = text;
     // The reading has now been delivered — lock this seeker out for the rest of the day.
     markReadingCompleteToday();
+  }
+
+  // Fallback for a single-card interpretation — only fires when the proxy
+  // can't be reached. Uses position + orientation so the copy differs by draw.
+  function singleCardFallback({ card, reversed, pos, classical }) {
+    const name = card.name + (reversed ? ", inverted," : "");
+    if (pos === "The Past") {
+      return reversed
+        ? `${name} rests in the soil you came from — ${classical}. What once turned against you is still echoing, but quieter now than when it first arrived.`
+        : `In the ground beneath you, ${name} speaks plainly — ${classical}. That is the weather you walked in with; it shaped the question you bring tonight.`;
+    }
+    if (pos === "The Present") {
+      return reversed
+        ? `At this crossing, ${name} holds its breath — ${classical}. The current has not stopped, only turned inward; notice where it catches on you.`
+        : `Right here, right now, ${name} meets you face-to-face — ${classical}. This is the room you are standing in as you ask.`;
+    }
+    // Future
+    return reversed
+      ? `Ahead, ${name} gathers in slow light — ${classical}. It does not arrive on schedule; it arrives in a mood. Watch for it at the edges.`
+      : `Up the road, ${name} is forming — ${classical}. Not a promise, but a direction the present is already leaning toward.`;
   }
 
   function buildFallbackSummary() {

@@ -49,47 +49,29 @@ body {
   min-height: 100dvh;
 }
 
-/* screen-specific backdrops layered behind content
-   — on portrait (mobile) fill the height; on landscape (laptop/desktop) fill the width.
-   Any gap that opens up on unusual aspect ratios is filled by the body's purple gradient. */
+/* Screen backdrops — one image per scene, scaled with `cover` so the image
+   fills the viewport in both dimensions without letterboxing. A single,
+   gentle dim sits on top so the gold text remains readable. */
 .screen > .screen-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   background-repeat: no-repeat;
-  background-size: auto 100%;          /* portrait default — fill height */
-  background-position: center;
+  background-size: cover;
+  background-position: center center;
   opacity: 0;
   transition: opacity 0.8s ease;
-}
-@media (orientation: landscape) {
-  .screen > .screen-bg {
-    background-size: 100% auto;        /* laptop/desktop — fill width */
-    background-position: center top;
-  }
 }
 .screen.active > .screen-bg { opacity: 1; }
 .screen > .screen-bg::after {
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse at 50% 40%, rgba(18, 5, 36, 0.0) 0%, rgba(18, 5, 36, 0.55) 60%, rgba(10, 2, 24, 0.85) 100%);
+  background: rgba(10, 2, 24, 0.35);
 }
-.screen > .screen-bg.start { background-image: url("madame_celandra_start_background.png"); }
+.screen > .screen-bg.start  { background-image: url("madame_celandra_start_background.png"); }
 .screen > .screen-bg.select { background-image: url("madame_celandra_select_background.png"); }
-/* stronger vignette on start so the title reads cleanly over the parlor scene */
-.screen > .screen-bg.start::after {
-  background:
-    linear-gradient(180deg, rgba(10, 2, 24, 0.55) 0%, rgba(10, 2, 24, 0.15) 45%, rgba(10, 2, 24, 0.85) 100%),
-    radial-gradient(ellipse at 50% 40%, rgba(18, 5, 36, 0.0) 0%, rgba(18, 5, 36, 0.35) 60%, rgba(10, 2, 24, 0.75) 100%);
-}
-.screen > .screen-bg.select::after {
-  background:
-    linear-gradient(180deg, rgba(10, 2, 24, 0.4) 0%, rgba(10, 2, 24, 0.65) 100%),
-    radial-gradient(ellipse at 50% 55%, rgba(18, 5, 36, 0.0) 0%, rgba(18, 5, 36, 0.55) 65%, rgba(10, 2, 24, 0.9) 100%);
-}
 .screen > * { position: relative; z-index: 1; }
 
 /* ── subtle star-field backdrop ───────────────────────────── */
@@ -382,11 +364,7 @@ em { color: var(--gold-bright); font-style: italic; }
 }
 
 /* ── Card select screen ───────────────────────────────────── */
-#card-screen {
-  background:
-    radial-gradient(ellipse at 50% 45%, rgba(108, 62, 168, 0.55), transparent 65%),
-    radial-gradient(ellipse at 50% 90%, rgba(18, 5, 36, 0.95), transparent 70%);
-}
+/* (backdrop is now the shared .screen-bg.select — no extra gradient here) */
 .card-table {
   flex: 1;
   display: flex;
