@@ -75,8 +75,9 @@ body {
   inset: 0;
   background: rgba(10, 2, 24, 0.35);
 }
-.screen > .screen-bg.start  { background-image: url("madame_celandra_start_background.png"); }
-.screen > .screen-bg.select { background-image: url("madame_celandra_select_background.png"); }
+.screen > .screen-bg.start    { background-image: url("madame_celandra_start_background.png"); }
+.screen > .screen-bg.question { background-image: url("madame_celandra_question_background.png"); }
+.screen > .screen-bg.select   { background-image: url("madame_celandra_select_background.png"); }
 .screen > * { position: relative; z-index: 1; }
 
 /* ── subtle star-field backdrop ───────────────────────────── */
@@ -263,64 +264,24 @@ em { color: var(--gold-bright); font-style: italic; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* ── Question screen ──────────────────────────────────────── */
-/* Shrunk so "What weighs upon your heart?" fits on one line on desktop.
-   On phones narrower than ~420px it may still wrap — that's fine. */
+/* Shrunk a little further — sits more gracefully beneath the painted
+   scene on the question backdrop. */
 #question-screen h1 {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   letter-spacing: 0.04em;
+  margin-bottom: 4px;
 }
 @media (min-width: 720px) {
-  #question-screen h1 { font-size: 1.55rem; white-space: nowrap; }
-}
-
-/* The scene behind the dialog — Madame seated behind her round tarot table.
-   The two images sit in the lower half of the viewport, breaking out of
-   the 640px content column so they span the full screen width like the
-   backdrop itself. Madame is behind the table, peeking above its rim. */
-.question-tableau {
-  position: absolute;
-  left: calc(50% - 50vw);
-  width: 100vw;
-  top: 0;
-  bottom: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-.question-tableau .qt-madame,
-.question-tableau .qt-table {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  pointer-events: none;
-  user-select: none;
-}
-/* Madame portrait: peeks up from behind, centered horizontally, sized so
-   her head and shoulders sit above the table's top edge. */
-.question-tableau .qt-madame {
-  bottom: 28%;
-  width: min(78%, 440px);
-  height: auto;
-  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.5));
-  opacity: 0.96;
-}
-/* Round purple tarot table: foreground, centered at the bottom. */
-.question-tableau .qt-table {
-  bottom: -2%;
-  width: min(112%, 620px);
-  height: auto;
-  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.55));
-}
-@media (min-width: 720px) {
-  .question-tableau .qt-madame { bottom: 30%; width: min(44%, 420px); }
-  .question-tableau .qt-table  { bottom: 0;   width: min(68%, 620px); }
+  #question-screen h1 { font-size: 1.35rem; white-space: nowrap; }
 }
 
 /* bottom-docked cluster: pushes Madame's dialog, the input, and buttons
-   to the bottom of the viewport so the upper half can breathe with the
-   tableau behind it. */
+   to the bottom of the viewport so the backdrop's painted scene can
+   breathe in the upper portion of the screen. The extra padding-bottom
+   nudges the cluster further down than a pure margin-top:auto alone. */
 .q-bottom-stack {
   margin-top: auto;
+  padding-bottom: 4vh;
   position: relative;
   z-index: 2;
   width: 100%;
@@ -330,6 +291,12 @@ em { color: var(--gold-bright); font-style: italic; }
    text fills the whole bubble width. */
 .madame.no-avatar {
   gap: 0;
+}
+
+/* Tighter line spacing inside Madame's bubble on the question screen so
+   her intro fits more compactly at the bottom. */
+#question-screen .madame .bubble {
+  line-height: 1.3;
 }
 
 #question-screen .q-input-wrap {
