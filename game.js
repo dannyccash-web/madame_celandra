@@ -135,6 +135,8 @@
       return reply;
     } catch (err) {
       const msg = err?.message || "something went dark";
+      // Surface the real cause in devtools so we can diagnose post-mortem.
+      console.error("[Madame Celandra] /api/madame failed:", err);
       const fb = fallback || defaultFallback(msg);
       bubbleEl.textContent = "";
       await typeOut(bubbleEl, fb);

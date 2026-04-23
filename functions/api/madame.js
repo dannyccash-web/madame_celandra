@@ -63,8 +63,11 @@ export async function onRequestPost(context) {
   if (!prompt) {
     return json(400, { error: "`prompt` is required." });
   }
-  if (prompt.length > 4000) {
-    return json(400, { error: "`prompt` is too long (max 4000 chars)." });
+  // The three-card summary call stitches the question, the card list, and
+  // all three per-card interpretations together, which runs long. Raise
+  // the ceiling comfortably above that worst case.
+  if (prompt.length > 12000) {
+    return json(400, { error: "`prompt` is too long (max 12000 chars)." });
   }
 
   const hardCeiling  = Number(env.MADAME_MAX_TOKENS) || 1500;

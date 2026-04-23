@@ -51,10 +51,15 @@ body {
 
 /* Screen backdrops — one image per scene, scaled with `cover` so the image
    fills the viewport in both dimensions without letterboxing. A single,
-   gentle dim sits on top so the gold text remains readable. */
+   gentle dim sits on top so the gold text remains readable.
+   On desktop the .screen is max-width: 640px, so we break the backdrop out
+   to 100vw via `left: calc(50% - 50vw)` so it always fills the viewport. */
 .screen > .screen-bg {
   position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 50vw);
+  width: 100vw;
   z-index: 0;
   pointer-events: none;
   background-repeat: no-repeat;
@@ -182,54 +187,14 @@ em { color: var(--gold-bright); font-style: italic; }
   text-align: center;
   gap: 18px;
 }
-#start-screen > .madame-portrait {
-  position: absolute;
-  right: -6%;
-  bottom: 0;
-  height: 78%;
-  max-height: 640px;
-  width: auto;
-  z-index: 1;
-  pointer-events: none;
-  filter: drop-shadow(0 0 32px rgba(0, 0, 0, 0.55));
-  animation: portraitFade 1.4s ease 0.2s both;
-}
-@keyframes portraitFade {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: none; }
-}
-@media (max-width: 520px) {
-  #start-screen > .madame-portrait { right: -18%; height: 62%; opacity: 0.85; }
-}
-.logo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  margin-top: 10vh;
-}
-.logo .eye-glyph {
-  width: 120px;
-  height: 120px;
-  filter: drop-shadow(0 0 20px rgba(217, 180, 74, 0.4));
-}
-.logo .title {
-  font-family: var(--font-display);
-  font-size: 2.4rem;
-  font-weight: 700;
-  color: var(--gold);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  line-height: 1.05;
-  text-shadow: 0 0 22px rgba(217, 180, 74, 0.45);
-}
-.logo .subtitle {
-  font-family: var(--font-body);
-  font-style: italic;
-  color: var(--gold-bright);
-  letter-spacing: 0.3em;
-  font-size: 0.95rem;
-  opacity: 0.85;
+/* The single logo image that replaces the old portrait + eye + title + subtitle */
+#start-screen > .logo-img {
+  display: block;
+  width: min(88%, 520px);
+  height: auto;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 28px rgba(217, 180, 74, 0.35));
+  animation: fadeIn 0.9s ease both;
 }
 #start-screen .btn { margin-top: 18px; }
 
@@ -298,6 +263,16 @@ em { color: var(--gold-bright); font-style: italic; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* ── Question screen ──────────────────────────────────────── */
+/* Shrunk so "What weighs upon your heart?" fits on one line on desktop.
+   On phones narrower than ~420px it may still wrap — that's fine. */
+#question-screen h1 {
+  font-size: 1.3rem;
+  letter-spacing: 0.04em;
+}
+@media (min-width: 720px) {
+  #question-screen h1 { font-size: 1.55rem; white-space: nowrap; }
+}
+
 #question-screen .q-input-wrap {
   margin: 12px 0 16px;
   display: flex;
@@ -675,9 +650,4 @@ em { color: var(--gold-bright); font-style: italic; }
   .card { width: 240px; height: 384px; }
   .deck { width: 160px; height: 250px; }
   h1 { font-size: 2.6rem; }
-  .logo .title { font-size: 2.8rem; }
-}
-@media (max-height: 640px) {
-  .logo { margin-top: 4vh; }
-  .logo .eye-glyph { width: 90px; height: 90px; }
 }

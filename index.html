@@ -17,48 +17,8 @@
     <!-- ══════════════════  1 · START SCREEN  ══════════════════ -->
     <section id="start-screen" class="screen active" aria-label="Start">
       <div class="screen-bg start" aria-hidden="true"></div>
-      <img class="madame-portrait" src="madame_celandre.png" alt="Madame Celandra" aria-hidden="true" />
-      <div class="logo">
-        <!-- mystical all-seeing-eye logo -->
-        <svg class="eye-glyph" viewBox="0 0 120 120" aria-hidden="true">
-          <defs>
-            <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%"  stop-color="#ffd87a" stop-opacity="0.9"/>
-              <stop offset="60%" stop-color="#d9b44a" stop-opacity="0.4"/>
-              <stop offset="100%" stop-color="#120524" stop-opacity="0"/>
-            </radialGradient>
-          </defs>
-          <!-- rays -->
-          <g stroke="#d9b44a" stroke-width="1.2" opacity="0.7">
-            <line x1="60" y1="6"   x2="60" y2="18"/>
-            <line x1="60" y1="102" x2="60" y2="114"/>
-            <line x1="6"  y1="60"  x2="18" y2="60"/>
-            <line x1="102" y1="60" x2="114" y2="60"/>
-            <line x1="20" y1="20"  x2="30" y2="30"/>
-            <line x1="100" y1="20" x2="90" y2="30"/>
-            <line x1="20" y1="100" x2="30" y2="90"/>
-            <line x1="100" y1="100" x2="90" y2="90"/>
-          </g>
-          <!-- outer circle -->
-          <circle cx="60" cy="60" r="42" fill="url(#eyeGlow)"/>
-          <circle cx="60" cy="60" r="42" fill="none" stroke="#d9b44a" stroke-width="1.5"/>
-          <!-- eye shape -->
-          <path d="M24,60 Q60,28 96,60 Q60,92 24,60 Z" fill="#120524" stroke="#d9b44a" stroke-width="2"/>
-          <!-- iris -->
-          <circle cx="60" cy="60" r="12" fill="#6c3ea8" stroke="#d9b44a" stroke-width="1.5"/>
-          <!-- pupil -->
-          <circle cx="60" cy="60" r="5" fill="#120524"/>
-          <!-- highlight -->
-          <circle cx="64" cy="56" r="1.8" fill="#ffd87a"/>
-          <!-- stars around -->
-          <g fill="#ffd87a" opacity="0.8">
-            <polygon points="60,24 61,27 64,27 62,29 63,32 60,30 57,32 58,29 56,27 59,27"/>
-            <polygon points="60,96 61,93 64,93 62,91 63,88 60,90 57,88 58,91 56,93 59,93"/>
-          </g>
-        </svg>
-        <div class="title">Madame<br/>Celandra</div>
-        <div class="subtitle">— a tarot reading —</div>
-      </div>
+      <img class="logo-img" src="madame_celandre_logo.png"
+           alt="Madame Celandra — a tarot reading" />
 
       <button class="btn" id="begin-btn">Begin Reading</button>
 
