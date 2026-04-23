@@ -110,11 +110,28 @@
     });
 
     if (!res.ok) {
+      // Read once as text, then try to parse. This lets us surface BOTH
+      // our proxy's JSON `error` field AND (when the body isn't JSON —
+      // e.g. Cloudflare returning its own 405/403/524 page) a truncated
+      // snippet of whatever came back, which is very useful for
+      // diagnosing routing problems.
       let msg = `HTTP ${res.status}`;
-      try {
-        const errBody = await res.json();
-        if (errBody?.error) msg = errBody.error;
-      } catch {}
+      let raw = "";
+      try { raw = await res.text(); } catch {}
+      if (raw) {
+        try {
+          const errBody = JSON.parse(raw);
+          if (errBody?.error) msg = errBody.error;
+        } catch {
+          // Not JSON — include a short, sanitized snippet in the error
+          const snippet = raw
+            .replace(/<[^>]+>/g, " ")      // strip HTML tags
+            .replace(/\s+/g, " ")
+            .trim()
+            .slice(0, 140);
+          if (snippet) msg = `HTTP ${res.status} — ${snippet}`;
+        }
+      }
       if (res.status === 429) msg = "The cards need a moment — too many readings just now. Try again in a bit.";
       throw new Error(msg);
     }

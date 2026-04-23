@@ -118,8 +118,16 @@ export async function onRequestPost(context) {
   });
 }
 
-// Reject other methods politely
-export async function onRequest(context) {
-  return json(405, { error: "Method not allowed. POST to /api/madame." },
-    { "Allow": "POST, OPTIONS" });
-}
+// Explicit 405s for each non-POST method. We do NOT export a generic
+// `onRequest` catch-all, because in some Cloudflare Pages routing paths
+// that catch-all has been observed to intercept POST requests too,
+// causing every call to return 405. Listing methods individually keeps
+// routing unambiguous.
+const methodNotAllowed = () =>
+  json(405, { error: "Method not allowed. POST to /api/madame." },
+       { "Allow": "POST, OPTIONS" });
+export const onRequestGet    = methodNotAllowed;
+export const onRequestPut    = methodNotAllowed;
+export const onRequestPatch  = methodNotAllowed;
+export const onRequestDelete = methodNotAllowed;
+export const onRequestHead   = methodNotAllowed;
