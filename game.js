@@ -11,6 +11,9 @@
   const MADAME_URL = "/api/madame";
   // One reading per day — track the local date of the last completed reading.
   const LAST_READING_KEY = "madame_last_reading_date";
+  // Temporarily off while the game is being built — flip back to true to
+  // re-enable the one-reading-per-day gate.
+  const DAILY_LIMIT_ENABLED = false;
 
   // ---------- state ----------
   const state = {
@@ -78,6 +81,7 @@
     catch { /* private mode, etc. — gate silently disabled */ }
   }
   function hasReadingToday() {
+    if (!DAILY_LIMIT_ENABLED) return false;
     return lastReadingDate() === todayLocalISO();
   }
   function applyStartGate() {
