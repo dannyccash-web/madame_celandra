@@ -42,6 +42,18 @@
 
       <!-- bottom-docked cluster: Madame's dialog, the input, and the buttons -->
       <div class="q-bottom-stack">
+        <!-- shown after she responds — sits above the dialog, centered -->
+        <div class="shuffle-stage" id="shuffle-stage" aria-hidden="true">
+          <div class="shuffle-card" style="animation-delay: 0s"></div>
+          <div class="shuffle-card" style="animation-delay: -0.4s"></div>
+          <div class="shuffle-card" style="animation-delay: -0.8s"></div>
+          <div class="shuffle-card" style="animation-delay: -1.2s"></div>
+          <div class="shuffle-card" style="animation-delay: -1.6s"></div>
+          <div class="shuffle-card" style="animation-delay: -2.0s"></div>
+          <div class="shuffle-card" style="animation-delay: -2.4s"></div>
+          <div class="shuffle-card" style="animation-delay: -2.8s"></div>
+        </div>
+
         <div class="madame no-avatar">
           <div>
             <div class="name">Madame Celandra</div>
@@ -57,18 +69,6 @@
           <div class="btn-row">
             <button class="btn" id="ask-btn">Ask Madame Celandra</button>
           </div>
-        </div>
-
-        <!-- shown after she responds -->
-        <div class="shuffle-stage" id="shuffle-stage" aria-hidden="true">
-          <div class="shuffle-card" style="animation-delay: 0s"></div>
-          <div class="shuffle-card" style="animation-delay: -0.4s"></div>
-          <div class="shuffle-card" style="animation-delay: -0.8s"></div>
-          <div class="shuffle-card" style="animation-delay: -1.2s"></div>
-          <div class="shuffle-card" style="animation-delay: -1.6s"></div>
-          <div class="shuffle-card" style="animation-delay: -2.0s"></div>
-          <div class="shuffle-card" style="animation-delay: -2.4s"></div>
-          <div class="shuffle-card" style="animation-delay: -2.8s"></div>
         </div>
 
         <div class="btn-row" id="continue-to-cards-row" style="display:none; margin-top: 10px;">

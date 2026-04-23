@@ -120,16 +120,22 @@ body {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
 /* ── typography ───────────────────────────────────────────── */
+/* All in-game headings share the same compact size & treatment so the
+   four screens feel like one piece. The size is the same one we settled
+   on for "What weighs upon your heart?" — small, quiet, elegant. */
 h1, h2, h3 {
   font-family: var(--font-display);
   color: var(--gold);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-align: center;
   text-shadow: 0 0 18px rgba(217, 180, 74, 0.35);
-  margin: 0 0 12px;
+  margin: 0 0 8px;
+  font-size: 1.0rem;
+  font-weight: 600;
 }
-h1 { font-size: 2.2rem; font-weight: 700; }
-h2 { font-size: 1.4rem; font-weight: 500; }
+@media (min-width: 720px) {
+  h1, h2, h3 { font-size: 1.1rem; }
+}
 p  { margin: 0 0 10px; }
 em { color: var(--gold-bright); font-style: italic; }
 
@@ -188,16 +194,18 @@ em { color: var(--gold-bright); font-style: italic; }
   text-align: center;
   gap: 18px;
 }
-/* The single logo image that replaces the old portrait + eye + title + subtitle */
+/* The single logo image that replaces the old portrait + eye + title + subtitle.
+   Sized in viewport units so it can grow past the 640px .screen max-width
+   on desktop. */
 #start-screen > .logo-img {
   display: block;
-  width: min(96%, 640px);
+  width: min(96vw, 900px);
   height: auto;
   margin: 0 auto;
   filter: drop-shadow(0 0 28px rgba(217, 180, 74, 0.35));
   animation: fadeIn 0.9s ease both;
 }
-#start-screen .btn { margin-top: 48px; }
+#start-screen .btn { margin-top: 96px; }
 
 .settings-link {
   margin-top: auto;
@@ -252,6 +260,7 @@ em { color: var(--gold-bright); font-style: italic; }
   letter-spacing: 0.2em;
   margin-bottom: 4px;
   text-transform: uppercase;
+  text-align: center;
 }
 
 /* blinking typing cursor */
@@ -290,9 +299,13 @@ em { color: var(--gold-bright); font-style: italic; }
    single source of truth for spacing inside the stack. */
 .q-bottom-stack > .madame,
 .q-bottom-stack > .q-input-wrap,
-.q-bottom-stack > .btn-row,
-.q-bottom-stack > .shuffle-stage {
+.q-bottom-stack > .btn-row {
   margin: 0;
+}
+/* shuffle stage keeps horizontal auto-centering but loses its vertical margin
+   so the flex `gap` controls spacing above and below it. */
+.q-bottom-stack > .shuffle-stage {
+  margin: 0 auto;
 }
 .q-bottom-stack > .q-input-wrap { gap: 8px; }
 
@@ -692,7 +705,8 @@ em { color: var(--gold-bright); font-style: italic; }
 @media (min-width: 720px) {
   body { font-size: 19px; }
   .screen { max-width: 640px; margin: 0 auto; width: 100%; padding: 32px 28px 40px; }
+  /* Start screen lifts the 640px cap so the large logo isn't clipped. */
+  #start-screen { max-width: 100%; }
   .card { width: 240px; height: 384px; }
   .deck { width: 160px; height: 250px; }
-  h1 { font-size: 2.6rem; }
 }

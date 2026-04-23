@@ -123,7 +123,10 @@
     return (data?.text || "").trim() || "…the cards are silent just now.";
   }
 
-  // Friendly wrapper that streams reply into a bubble element, with fallback on error
+  // Friendly wrapper that streams reply into a bubble element, with fallback on error.
+  // If `fallback` is a function, it receives the error message so the fallback
+  // copy can surface *why* Madame went silent — useful while we are still
+  // diagnosing timeouts, rate-limits, and proxy errors.
   async function madameSays(bubbleEl, userPrompt, { maxTokens = 600, fallback } = {}) {
     state.waitingForMadame = true;
     bubbleEl.classList.remove("typing");
@@ -137,7 +140,9 @@
       const msg = err?.message || "something went dark";
       // Surface the real cause in devtools so we can diagnose post-mortem.
       console.error("[Madame Celandra] /api/madame failed:", err);
-      const fb = fallback || defaultFallback(msg);
+      const fb = typeof fallback === "function"
+        ? fallback(msg)
+        : (fallback || defaultFallback(msg));
       bubbleEl.textContent = "";
       await typeOut(bubbleEl, fb);
       return fb;
@@ -382,15 +387,15 @@ ${positionGuidance(pos)}
 
 ${orientationGuidance(reversed)}
 
-Give a short interpretation — about 70–90 words, flowing prose. It must be unmistakably specific to ALL FOUR of these variables together:
-  1. the seeker's particular question,
-  2. the position "${pos}" (not a generic reading of the card),
-  3. the ${orient} orientation (lean hard on this; an upright ${card.name} and a reversed ${card.name} must read very differently),
-  4. this card's own symbolism.
+Write ~80–100 words of flowing prose in TWO movements, no headers:
 
-Do NOT close with a stock benediction. Banned phrases and patterns include: "trust the journey", "honor the pattern", "the cards reveal", "the universe whispers", "may you find", "remember to", "take this as". Your final sentence must belong uniquely to THIS card + position + orientation + question — if it could be swapped into any other reading unchanged, rewrite it.
+MOVEMENT 1 (about 2 sentences): Briefly name what ${card.name} ${orient} classically signifies — its core symbolism and what it tends to speak about when it appears in "${pos}". Use plain, lyrical language; no jargon.
 
-Do not forecast or mention the other two cards — they have not been drawn yet.
+MOVEMENT 2 (the rest of the passage): Bring that meaning DIRECTLY against what the seeker actually wrote above. Quote or paraphrase a specific detail from their question. Show how this card, in this position and this orientation, reflects or answers the particular situation they brought you. The reading must feel written for THEM and no one else — a stranger reading your response should be able to guess roughly what they asked.
+
+Banned phrases (do not use, even paraphrased): "trust the journey", "honor the pattern", "the cards reveal", "the universe whispers", "may you find", "remember to", "take this as", "the path unfolds", "embrace the".
+
+Do not forecast or mention the other two cards — they have not been drawn yet. Do not close with a stock blessing; your final sentence must belong uniquely to THIS seeker's question + this card + this position + this orientation.
     `.trim();
 
     const interp = await madameSays(
@@ -427,25 +432,33 @@ Do not forecast or mention the other two cards — they have not been drawn yet.
       return `- ${POSITIONS[i]}: ${d.card.name} (${orient})`;
     }).join("\n");
 
-    const prompt = `
-The seeker came to you tonight with this exact question, in their own words:
+    // Compact card-meanings block instead of re-sending the full per-card
+    // interpretations. The model gets the classical meanings and can build
+    // a fresh synthesis tailored to THIS question, and the prompt stays
+    // well under the proxy's 12000-char ceiling.
+    const cardMeanings = state.draws.map((d, i) => {
+      const orient = d.reversed ? "reversed" : "upright";
+      const m = d.reversed ? d.card.reversed : d.card.upright;
+      return `- ${POSITIONS[i]} — ${d.card.name} (${orient}): ${m}`;
+    }).join("\n");
 
+    const prompt = `
+The seeker asked you, in their own words:
 """${state.question}"""
 
-They drew this three-card spread (Past / Present / Future):
+They drew (Past / Present / Future):
+${cardMeanings}
 
-${cardSummary}
+Give this seeker a final reading of ~220–280 words, flowing prose, written unmistakably about THIS question.
 
-For reference, your prior single-card readings were:
-${state.draws.map((d, i) => `\n${POSITIONS[i]} — ${d.card.name} (${d.reversed ? "reversed" : "upright"}):\n${d.interpretation}`).join("\n")}
+Structure:
+1. Open by naming, in your own words, the specific situation or feeling you heard in their question. That thread must run through every sentence.
+2. Move through the cards in order — past, present, future — naming each as you arrive and showing how its symbolism speaks to the particular circumstance THEY brought you. Build them into one arc, not three paragraphs.
+3. Close with one concrete, grounded piece of counsel that DIRECTLY addresses their concern. If it was a decision, lean one way while honoring their agency. If a worry, name what to watch for. If a longing, name what it is asking of them. No generic benedictions.
 
-Now give this seeker a final reading that is unmistakably about THIS question and THIS spread — never a stock tarot summary that could be pasted into any other reading.
+Hard bans (do not use, even paraphrased): "trust the journey", "honor the pattern", "the cards reveal", "the universe whispers", "patterns not prophecy", "may you find", "embrace the", "the path unfolds". No headers, no bullets.
 
-Begin by naming, in your own words, what you heard them ask — the specific situation, the particular feeling or stake. That thread must run through every sentence that follows. Then move through the cards in order — past, present, future — naming each one as you arrive at it and showing how its symbolism speaks to the particular circumstance they brought you. The three cards should build on each other, not stand apart.
-
-Close with one piece of counsel that DIRECTLY answers or addresses their concern. Not vague "honor the pattern" wisdom — a concrete, grounded suggestion that only makes sense in the context of what they asked. If their question was a decision, lean toward one direction while honoring their agency. If it was a worry, name what to watch for. If it was a longing, name what it's asking of them.
-
-Write in flowing prose, about 280–350 words. No headers, no bullets, no canned tarot platitudes ("patterns not prophecy", "the cards reveal", "trust the journey"). Speak as Madame Celandra would: warm, lyrical, specific.
+Speak as Madame Celandra — warm, lyrical, specific.
     `.trim();
 
     $("#summary-intro-line").textContent = "She weaves the threads together…";
@@ -453,8 +466,8 @@ Write in flowing prose, about 280–350 words. No headers, no bullets, no canned
       $("#summary-text"),
       prompt,
       {
-        maxTokens: 1200,
-        fallback: buildFallbackSummary()
+        maxTokens: 900,
+        fallback: (errMsg) => buildFallbackSummary(errMsg)
       }
     );
     state.summary = text;
@@ -482,16 +495,17 @@ Write in flowing prose, about 280–350 words. No headers, no bullets, no canned
       : `Up the road, ${name} is forming — ${classical}. Not a promise, but a direction the present is already leaning toward.`;
   }
 
-  function buildFallbackSummary() {
-    // Only fires when the proxy is unreachable. Keep it brief and honest
-    // rather than dressing up a generic reading that wouldn't answer the
-    // seeker's question anyway.
+  function buildFallbackSummary(errMsg = "") {
+    // Only fires when the proxy is unreachable or returns an error. We now
+    // surface the underlying reason inline so we can actually diagnose
+    // why Madame went silent during summary generation.
     const lines = state.draws.map((d, i) => {
       const o = d.reversed ? "reversed" : "upright";
       const m = d.reversed ? d.card.reversed : d.card.upright;
       return `${POSITIONS[i]} — *${d.card.name}* (${o}): ${m}.`;
     }).join("\n\n");
-    return `The veil is thick tonight and my words do not travel far. Still — I will not send you away empty-handed. Your cards stand thus:\n\n${lines}\n\nSit with them a moment, and return to me when the mist has lifted, so that I may speak of your question in full.`;
+    const why = errMsg ? `\n\n(The spirits stumbled on: ${errMsg})` : "";
+    return `The veil is thick tonight and my words do not travel far. Still — I will not send you away empty-handed. Your cards stand thus:\n\n${lines}\n\nSit with them a moment, and return to me when the mist has lifted, so that I may speak of your question in full.${why}`;
   }
 
   function renderSummaryCards() {
