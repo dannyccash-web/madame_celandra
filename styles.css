@@ -191,13 +191,13 @@ em { color: var(--gold-bright); font-style: italic; }
 /* The single logo image that replaces the old portrait + eye + title + subtitle */
 #start-screen > .logo-img {
   display: block;
-  width: min(88%, 520px);
+  width: min(96%, 640px);
   height: auto;
   margin: 0 auto;
   filter: drop-shadow(0 0 28px rgba(217, 180, 74, 0.35));
   animation: fadeIn 0.9s ease both;
 }
-#start-screen .btn { margin-top: 18px; }
+#start-screen .btn { margin-top: 48px; }
 
 .settings-link {
   margin-top: auto;
@@ -264,27 +264,43 @@ em { color: var(--gold-bright); font-style: italic; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* ── Question screen ──────────────────────────────────────── */
-/* Shrunk a little further — sits more gracefully beneath the painted
-   scene on the question backdrop. */
+/* Heading sits quietly above the painted backdrop. */
 #question-screen h1 {
-  font-size: 1.15rem;
+  font-size: 1.0rem;
   letter-spacing: 0.04em;
   margin-bottom: 4px;
 }
 @media (min-width: 720px) {
-  #question-screen h1 { font-size: 1.35rem; white-space: nowrap; }
+  #question-screen h1 { font-size: 1.1rem; white-space: nowrap; }
 }
 
-/* bottom-docked cluster: pushes Madame's dialog, the input, and buttons
-   to the bottom of the viewport so the backdrop's painted scene can
-   breathe in the upper portion of the screen. The extra padding-bottom
-   nudges the cluster further down than a pure margin-top:auto alone. */
+/* bottom-docked cluster: pushed to the very bottom of the viewport.
+   Uses flex-column with a single consistent gap so the spacing between
+   the dialog bubble, the input field, and the button row is uniform. */
 .q-bottom-stack {
   margin-top: auto;
-  padding-bottom: 4vh;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   position: relative;
   z-index: 2;
   width: 100%;
+}
+/* zero out individual child margins so the parent's `gap` is the
+   single source of truth for spacing inside the stack. */
+.q-bottom-stack > .madame,
+.q-bottom-stack > .q-input-wrap,
+.q-bottom-stack > .btn-row,
+.q-bottom-stack > .shuffle-stage {
+  margin: 0;
+}
+.q-bottom-stack > .q-input-wrap { gap: 8px; }
+
+/* Reduce the screen's bottom padding on the question screen so the
+   bottom-docked stack sits closer to the viewport edge. */
+#question-screen { padding-bottom: 12px; }
+@media (min-width: 720px) {
+  #question-screen { padding-bottom: 16px; }
 }
 
 /* When the .madame bubble has no avatar, drop the left-column gap so the
@@ -293,10 +309,13 @@ em { color: var(--gold-bright); font-style: italic; }
   gap: 0;
 }
 
-/* Tighter line spacing inside Madame's bubble on the question screen so
-   her intro fits more compactly at the bottom. */
+/* Tighter line spacing and centered name inside Madame's bubble on the
+   question screen. */
 #question-screen .madame .bubble {
   line-height: 1.3;
+}
+#question-screen .madame .name {
+  text-align: center;
 }
 
 #question-screen .q-input-wrap {
