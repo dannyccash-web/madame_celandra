@@ -273,6 +273,65 @@ em { color: var(--gold-bright); font-style: italic; }
   #question-screen h1 { font-size: 1.55rem; white-space: nowrap; }
 }
 
+/* The scene behind the dialog — Madame seated behind her round tarot table.
+   The two images sit in the lower half of the viewport, breaking out of
+   the 640px content column so they span the full screen width like the
+   backdrop itself. Madame is behind the table, peeking above its rim. */
+.question-tableau {
+  position: absolute;
+  left: calc(50% - 50vw);
+  width: 100vw;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.question-tableau .qt-madame,
+.question-tableau .qt-table {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+/* Madame portrait: peeks up from behind, centered horizontally, sized so
+   her head and shoulders sit above the table's top edge. */
+.question-tableau .qt-madame {
+  bottom: 28%;
+  width: min(78%, 440px);
+  height: auto;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.5));
+  opacity: 0.96;
+}
+/* Round purple tarot table: foreground, centered at the bottom. */
+.question-tableau .qt-table {
+  bottom: -2%;
+  width: min(112%, 620px);
+  height: auto;
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.55));
+}
+@media (min-width: 720px) {
+  .question-tableau .qt-madame { bottom: 30%; width: min(44%, 420px); }
+  .question-tableau .qt-table  { bottom: 0;   width: min(68%, 620px); }
+}
+
+/* bottom-docked cluster: pushes Madame's dialog, the input, and buttons
+   to the bottom of the viewport so the upper half can breathe with the
+   tableau behind it. */
+.q-bottom-stack {
+  margin-top: auto;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+/* When the .madame bubble has no avatar, drop the left-column gap so the
+   text fills the whole bubble width. */
+.madame.no-avatar {
+  gap: 0;
+}
+
 #question-screen .q-input-wrap {
   margin: 12px 0 16px;
   display: flex;
