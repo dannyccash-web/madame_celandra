@@ -426,11 +426,11 @@ ${positionGuidance(pos)}
 
 ${orientationGuidance(reversed)}
 
-Write ~80–100 words of flowing prose in TWO movements, no headers:
+Write 3–4 sentences of flowing prose, no headers. Be succinct.
 
-MOVEMENT 1 (about 2 sentences): Briefly name what ${card.name} ${orient} classically signifies — its core symbolism and what it tends to speak about when it appears in "${pos}". Use plain, lyrical language; no jargon.
+SENTENCE 1: Briefly name what ${card.name} ${orient} classically signifies in "${pos}" — its core symbolism in plain, lyrical language. No jargon.
 
-MOVEMENT 2 (the rest of the passage): Bring that meaning DIRECTLY against what the seeker actually wrote above. Quote or paraphrase a specific detail from their question. Show how this card, in this position and this orientation, reflects or answers the particular situation they brought you. The reading must feel written for THEM and no one else — a stranger reading your response should be able to guess roughly what they asked.
+SENTENCES 2–4: Bring that meaning DIRECTLY against what the seeker actually wrote above. Quote or paraphrase a specific detail from their question and show how this card, in this position and this orientation, reflects or answers the particular situation they brought you. The reading must feel written for THEM and no one else — a stranger reading your response should be able to guess roughly what they asked.
 
 Banned phrases (do not use, even paraphrased): "trust the journey", "honor the pattern", "the cards reveal", "the universe whispers", "may you find", "remember to", "take this as", "the path unfolds", "embrace the".
 
@@ -441,7 +441,7 @@ Do not forecast or mention the other two cards — they have not been drawn yet.
       $("#card-interp"),
       cardPrompt,
       {
-        maxTokens: 400,
+        maxTokens: 220,
         fallback: singleCardFallback({ card, reversed, pos, classical })
       }
     );
