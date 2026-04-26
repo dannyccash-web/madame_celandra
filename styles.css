@@ -119,7 +119,7 @@ body {
   position: relative;
 }
 .screen.active { display: flex; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ── typography ───────────────────────────────────────────── */
 /* All in-game headings share the same compact size & treatment so the
