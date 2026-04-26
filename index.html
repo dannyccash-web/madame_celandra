@@ -54,7 +54,8 @@
           <div class="shuffle-card" style="animation-delay: -2.8s"></div>
         </div>
 
-        <div class="madame no-avatar">
+        <div class="madame">
+          <div class="avatar" aria-hidden="true"></div>
           <div>
             <div class="name">Madame Celandra</div>
             <div class="bubble" id="madame-intro"></div>
@@ -135,19 +136,18 @@
     <section id="summary-screen" class="screen" aria-label="Your reading">
       <div class="screen-bg select" aria-hidden="true"></div>
       <h1>Your Reading</h1>
-      <div class="ornament">✦ ✦ ✦</div>
 
       <div class="cards-row" id="summary-cards"></div>
 
+      <!-- The full reading is rendered directly inside Madame's dialog box —
+           same treatment as every other Madame box in the game. -->
       <div class="madame">
         <div class="avatar" aria-hidden="true"></div>
         <div>
           <div class="name">Madame Celandra</div>
-          <div class="bubble" id="summary-intro-line">She weaves the threads together…</div>
+          <div class="bubble reading-text" id="summary-text"></div>
         </div>
       </div>
-
-      <div class="reading-text" id="summary-text"></div>
 
       <div class="btn-row" style="margin-top: 16px;">
         <button class="btn" id="download-btn">Download as PDF</button>

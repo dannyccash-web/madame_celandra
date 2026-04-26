@@ -137,7 +137,29 @@
     }
 
     const data = await res.json();
-    return (data?.text || "").trim() || "…the cards are silent just now.";
+    const cleaned = scrubMadameText((data?.text || "").trim());
+    return cleaned || "…the cards are silent just now.";
+  }
+
+  // Belt-and-suspenders: even though the system prompt forbids stage
+  // directions and asterisks, occasionally a model slips. Strip any
+  // *…* spans (treated as scene directions / italics) and any stray
+  // lone asterisks before the text reaches the bubble. This way the
+  // seeker never sees literal "*adjusts the crystal*" or stray "*".
+  function scrubMadameText(text) {
+    if (!text) return text;
+    return text
+      // remove "*scene-direction*" or "*emphasis*" entirely — the model
+      // shouldn't be using these at all, so dropping them keeps the prose
+      // clean even when something slips through.
+      .replace(/\*[^*\n]+\*/g, "")
+      // strip any remaining stray asterisks
+      .replace(/\*+/g, "")
+      // tidy up the whitespace left behind by the strips above
+      .replace(/[ \t]{2,}/g, " ")
+      .replace(/[ \t]+([,.;:!?])/g, "$1")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
   }
 
   // Friendly wrapper that streams reply into a bubble element, with fallback on error.
@@ -478,7 +500,9 @@ Hard bans (do not use, even paraphrased): "trust the journey", "honor the patter
 Speak as Madame Celandra — warm, lyrical, specific.
     `.trim();
 
-    $("#summary-intro-line").textContent = "She weaves the threads together…";
+    // The summary text is now rendered as a normal Madame dialog bubble —
+    // no separate "She weaves…" intro box anymore. madameSays() will show
+    // the thinking dots in the bubble while it waits for the model.
     const text = await madameSays(
       $("#summary-text"),
       prompt,
@@ -621,18 +645,23 @@ Speak as Madame Celandra — warm, lyrical, specific.
       const cardH = 176;
       const gap = (W - MARGIN * 2 - cardW * 3) / 2;
 
+      // Cards are rendered as IMAGES ONLY — no position labels, no card
+      // name captions, no fallback symbol/text. If an image can't be
+      // loaded, the parchment-colored frame is left empty so nothing
+      // ugly bleeds into the layout.
       for (let i = 0; i < state.draws.length; i++) {
         const d = state.draws[i];
         const x = MARGIN + i * (cardW + gap);
         const y = rowTop;
 
-        // card frame
+        // parchment-colored frame with a thin gold border
         doc.setDrawColor(217, 180, 74);
         doc.setLineWidth(0.8);
         doc.setFillColor(243, 231, 200);
         doc.rect(x, y, cardW, cardH, "FD");
 
-        // image — try to load; if reversed, pre-rotate via canvas for reliability
+        // try to drop the card image on top of the frame; if it fails
+        // (CORS, network, etc.) we silently leave the empty frame.
         try {
           let dataURL = await fetchImageAsDataURL(d.card.img);
           if (dataURL && d.reversed) {
@@ -640,27 +669,14 @@ Speak as Madame Celandra — warm, lyrical, specific.
           }
           if (dataURL) {
             doc.addImage(dataURL, "JPEG", x, y, cardW, cardH, undefined, "FAST");
-          } else {
-            drawPDFCardFallback(doc, d.card, x, y, cardW, cardH, d.reversed);
           }
         } catch {
-          drawPDFCardFallback(doc, d.card, x, y, cardW, cardH, d.reversed);
+          /* image unavailable — leave the parchment frame untouched */
         }
-
-        // caption: position + card name
-        doc.setFont("times", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(217, 180, 74);
-        doc.text(POSITIONS[i].toUpperCase(), x + cardW / 2, y + cardH + 14, { align: "center" });
-        doc.setFont("times", "italic");
-        doc.setFontSize(10);
-        doc.setTextColor(243, 231, 200);
-        const nameLbl = d.card.name + (d.reversed ? " (reversed)" : "");
-        doc.text(nameLbl, x + cardW / 2, y + cardH + 28, { align: "center" });
       }
 
-      // Reading text
-      const textTop = rowTop + cardH + 50;
+      // Reading text — sits just below the cards (no captions in between)
+      const textTop = rowTop + cardH + 24;
       doc.setFont("times", "bold");
       doc.setFontSize(13);
       doc.setTextColor(255, 216, 122);
@@ -707,26 +723,6 @@ Speak as Madame Celandra — warm, lyrical, specific.
     } finally {
       btn.disabled = false;
       btn.textContent = oldLabel;
-    }
-  }
-
-  function drawPDFCardFallback(doc, card, x, y, w, h, reversed) {
-    doc.setFillColor(42, 10, 85);
-    doc.rect(x, y, w, h, "F");
-    doc.setDrawColor(217, 180, 74);
-    doc.setLineWidth(0.8);
-    doc.rect(x, y, w, h);
-    doc.setTextColor(255, 216, 122);
-    doc.setFont("times", "bold");
-    doc.setFontSize(24);
-    doc.text("✦", x + w / 2, y + h / 2 - 4, { align: "center" });
-    doc.setFontSize(10);
-    const nm = doc.splitTextToSize(card.name, w - 16);
-    doc.text(nm, x + w / 2, y + h / 2 + 18, { align: "center" });
-    if (reversed) {
-      doc.setFontSize(8);
-      doc.setFont("times", "italic");
-      doc.text("reversed", x + w / 2, y + h - 10, { align: "center" });
     }
   }
 
