@@ -253,7 +253,7 @@
   }
   function orientationGuidance(reversed) {
     return reversed
-      ? "The card is REVERSED — its force is softened, delayed, turned inward, partly blocked, or expressed shadow-side. Thread that specific quality through the reading. Do not give the upright meaning with a caveat; speak the reversed meaning on its own terms."
+      ? "The card is INVERTED — its force is softened, delayed, turned inward, partly blocked, or expressed shadow-side. Thread that specific quality through the reading. Do not give the upright meaning with a caveat; speak the inverted meaning on its own terms."
       : "The card is UPRIGHT — its force arrives directly, in its native voice. Let that clarity be felt.";
   }
 
@@ -410,7 +410,7 @@
     await sleep(950);
     $("#card-interp-wrap").style.display = "flex";
     const pos = POSITIONS[state.currentDraw];
-    const orient = reversed ? "reversed" : "upright";
+    const orient = reversed ? "inverted" : "upright";
     const classical = reversed ? card.reversed : card.upright;
 
     const cardPrompt = `
@@ -426,11 +426,11 @@ ${positionGuidance(pos)}
 
 ${orientationGuidance(reversed)}
 
-Write 3–4 sentences of flowing prose, no headers. Be succinct.
+Write EXACTLY TWO sentences of flowing prose. No headers. No more, no less.
 
-SENTENCE 1: Briefly name what ${card.name} ${orient} classically signifies in "${pos}" — its core symbolism in plain, lyrical language. No jargon.
+SENTENCE 1: Summarize what ${card.name} ${orient} signifies in "${pos}" — its core meaning in plain, lyrical language. No jargon.
 
-SENTENCES 2–4: Bring that meaning DIRECTLY against what the seeker actually wrote above. Quote or paraphrase a specific detail from their question and show how this card, in this position and this orientation, reflects or answers the particular situation they brought you. The reading must feel written for THEM and no one else — a stranger reading your response should be able to guess roughly what they asked.
+SENTENCE 2: Interpret that meaning DIRECTLY against what the seeker actually wrote above. Reference a specific detail from their question and show how this card, in this position and this orientation, speaks to the particular situation they brought you.
 
 Banned phrases (do not use, even paraphrased): "trust the journey", "honor the pattern", "the cards reveal", "the universe whispers", "may you find", "remember to", "take this as", "the path unfolds", "embrace the".
 
@@ -441,7 +441,7 @@ Do not forecast or mention the other two cards — they have not been drawn yet.
       $("#card-interp"),
       cardPrompt,
       {
-        maxTokens: 220,
+        maxTokens: 160,
         fallback: singleCardFallback({ card, reversed, pos, classical })
       }
     );
@@ -467,7 +467,7 @@ Do not forecast or mention the other two cards — they have not been drawn yet.
     renderSummaryCards();
 
     const cardSummary = state.draws.map((d, i) => {
-      const orient = d.reversed ? "reversed" : "upright";
+      const orient = d.reversed ? "inverted" : "upright";
       return `- ${POSITIONS[i]}: ${d.card.name} (${orient})`;
     }).join("\n");
 
@@ -476,7 +476,7 @@ Do not forecast or mention the other two cards — they have not been drawn yet.
     // a fresh synthesis tailored to THIS question, and the prompt stays
     // well under the proxy's 12000-char ceiling.
     const cardMeanings = state.draws.map((d, i) => {
-      const orient = d.reversed ? "reversed" : "upright";
+      const orient = d.reversed ? "inverted" : "upright";
       const m = d.reversed ? d.card.reversed : d.card.upright;
       return `- ${POSITIONS[i]} — ${d.card.name} (${orient}): ${m}`;
     }).join("\n");
@@ -541,7 +541,7 @@ Speak as Madame Celandra — warm, lyrical, specific.
     // surface the underlying reason inline so we can actually diagnose
     // why Madame went silent during summary generation.
     const lines = state.draws.map((d, i) => {
-      const o = d.reversed ? "reversed" : "upright";
+      const o = d.reversed ? "inverted" : "upright";
       const m = d.reversed ? d.card.reversed : d.card.upright;
       return `${POSITIONS[i]} — *${d.card.name}* (${o}): ${m}.`;
     }).join("\n\n");
@@ -573,7 +573,7 @@ Speak as Madame Celandra — warm, lyrical, specific.
 
       const nm = document.createElement("div");
       nm.className = "cname";
-      nm.innerHTML = d.card.name + (d.reversed ? `<span class="rev">reversed</span>` : "");
+      nm.innerHTML = d.card.name + (d.reversed ? `<span class="rev">inverted</span>` : "");
 
       mini.appendChild(pos);
       mini.appendChild(cardWrap);
@@ -668,7 +668,7 @@ Speak as Madame Celandra — warm, lyrical, specific.
             dataURL = await rotate180DataURL(dataURL);
           }
           if (dataURL) {
-            doc.addImage(dataURL, "JPEG", x, y, cardW, cardH, undefined, "FAST");
+            doc.addImage(dataURL, "PNG", x, y, cardW, cardH, undefined, "FAST");
           }
         } catch {
           /* image unavailable — leave the parchment frame untouched */
@@ -740,7 +740,7 @@ Speak as Madame Celandra — warm, lyrical, specific.
         ctx.rotate(Math.PI);
         ctx.drawImage(img, 0, 0);
         try {
-          resolve(canvas.toDataURL("image/jpeg", 0.9));
+          resolve(canvas.toDataURL("image/png"));
         } catch {
           resolve(dataURL); // tainted canvas fallback — return original
         }

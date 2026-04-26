@@ -8,12 +8,13 @@ A mystical tarot reading game playable in the browser, powered by Claude behind 
 .
 ├── index.html                              # entry point
 ├── styles.css                              # dark-purple/gold mystical theme
-├── cards.js                                # full 78-card Rider-Waite deck
+├── cards.js                                # Madame Celandra's custom 35-card deck
 ├── game.js                                 # game logic + call to /api/madame
 ├── madame_celandra_start_background.png    # start-screen parlor art
 ├── madame_celandra_select_background.png   # card-select parlor art
 ├── madame_celandra_table.png               # tarot table
 ├── madame_celandre.png                     # Madame's portrait
+├── tarot card illustrations/               # 35 card-face PNGs
 └── functions/
     └── api/
         └── madame.js                       # Cloudflare Pages Function (proxy to Anthropic)
@@ -96,7 +97,7 @@ Then visit http://localhost:8788.
 
 1. **Start screen** — logo and "Begin Reading" button.
 2. **Question screen** — the player types what's on their mind; Madame acknowledges it and shuffles the deck.
-3. **Card-select screen** — the player taps the deck three times, once for the Past, Present, and Future positions. Each card is drawn at random from the full 78-card deck, with ~45% chance of being reversed. Madame interprets each card in turn.
+3. **Card-select screen** — the player taps the deck three times, once for the Past, Present, and Future positions. Each card is drawn at random from Madame's 35-card deck, with ~45% chance of being inverted. Madame interprets each card in turn (two sentences per card: a meaning, then how it speaks to the seeker's question).
 4. **Summary screen** — Madame weaves all three cards together into a flowing reading tied back to the original question. The reading can be downloaded as a styled PDF.
 
 All Claude responses come through `/api/madame`, which adds the Madame Celandra persona as a
