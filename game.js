@@ -283,18 +283,22 @@
   async function goToQuestion() {
     showScreen("question-screen");
 
-    // reset UI
+    // reset UI — including any state left from a prior reading,
+    // since "Begin Again" routes back through here without a full reload.
     $("#question-input").value = "";
     $("#q-input-wrap").style.display = "flex";
     $("#shuffle-stage").classList.remove("active");
     $("#continue-to-cards-row").style.display = "none";
+    $("#ask-btn").disabled = false;
+    const continueBtn = $("#continue-to-cards");
+    if (continueBtn) continueBtn.disabled = false;
     const intro = $("#madame-intro");
 
     // Greet via API
     await madameSays(
       intro,
-      `Greet the seeker as they arrive at your parlor for a three-card reading. Invite them to share what weighs on their mind — a question, a worry, or a curiosity. Keep your greeting warm and to about 45 words.`,
-      { maxTokens: 300, fallback: "Welcome, seeker. Settle yourself — the candles have caught the evening's draft. Tell me now: what weighs upon you tonight? Speak it plainly, and we shall let the cards answer in their quiet way." }
+      `Greet the seeker as they arrive at your parlor for a three-card reading. Invite them in one short breath to share what weighs on their mind. Keep it warm and to about 25 words.`,
+      { maxTokens: 220, fallback: "Welcome, seeker. Settle yourself — the candles have caught the evening's draft. Tell me: what weighs upon you tonight?" }
     );
   }
 
@@ -318,17 +322,27 @@
     $("#q-input-wrap").style.display = "none";
     $("#ask-btn").disabled = true;
 
+    // Show the "Continue to the Cards" button immediately, but inactive
+    // until Madame has finished speaking — the seeker can see what's
+    // coming next without being able to skip past her.
+    const continueRow = $("#continue-to-cards-row");
+    const continueBtn = $("#continue-to-cards");
+    continueBtn.disabled = true;
+    continueRow.style.display = "flex";
+
+    // Shuffle visual runs alongside Madame's reply so the page doesn't
+    // sit on the typing-dots and then sit again on a separate shuffle.
+    $("#shuffle-stage").classList.add("active");
+
     const intro = $("#madame-intro");
     await madameSays(
       intro,
-      `The seeker has just shared this with you:\n\n"""${q}"""\n\nAcknowledge what they've said warmly, in your own words — reflect briefly what you've heard. Then say you will shuffle the cards and ask them to breathe with you for a moment. Keep it to about 60 words. Do not yet give any tarot interpretation.`,
-      { maxTokens: 350, fallback: "I hear you — and I feel the weight of what you carry. Breathe with me now. I shall shuffle the cards; let the question linger in your mind like the scent of smoke, and when you are ready, we shall turn them over together." }
+      `The seeker has just shared this with you:\n\n"""${q}"""\n\nAcknowledge what they said warmly in your own words, reflect briefly what you heard, and tell them you'll shuffle the cards. Keep it to about 30 words. Do NOT yet give any tarot interpretation.`,
+      { maxTokens: 240, fallback: "I hear you — and I feel the weight of what you carry. Breathe with me. I shall shuffle the cards now; hold your question close." }
     );
 
-    // kick off the shuffle animation
-    $("#shuffle-stage").classList.add("active");
-    await sleep(2600);
-    $("#continue-to-cards-row").style.display = "flex";
+    // Madame is done — the seeker may now proceed.
+    continueBtn.disabled = false;
   }
 
   // 3) card select
@@ -488,16 +502,16 @@ The seeker asked you, in their own words:
 They drew (Past / Present / Future):
 ${cardMeanings}
 
-Give this seeker a final reading of ~220–280 words, flowing prose, written unmistakably about THIS question.
+Give this seeker a final reading of ~140–170 words, flowing prose, written unmistakably about THIS question.
 
 Structure:
-1. Open by naming, in your own words, the specific situation or feeling you heard in their question. That thread must run through every sentence.
-2. Move through the cards in order — past, present, future — naming each as you arrive and showing how its symbolism speaks to the particular circumstance THEY brought you. Build them into one arc, not three paragraphs.
-3. Close with one concrete, grounded piece of counsel that DIRECTLY addresses their concern. If it was a decision, lean one way while honoring their agency. If a worry, name what to watch for. If a longing, name what it is asking of them. No generic benedictions.
+1. Open by naming, briefly, the specific situation or feeling you heard in their question. That thread must run through every sentence.
+2. Move through the cards in order — past, present, future — naming each as you arrive and showing how it speaks to the particular circumstance THEY brought you. Build them into one arc, not three paragraphs.
+3. Close with one concrete, grounded piece of counsel that DIRECTLY addresses their concern. No generic benedictions.
 
 Hard bans (do not use, even paraphrased): "trust the journey", "honor the pattern", "the cards reveal", "the universe whispers", "patterns not prophecy", "may you find", "embrace the", "the path unfolds". No headers, no bullets.
 
-Speak as Madame Celandra — warm, lyrical, specific.
+Speak as Madame Celandra — warm, lyrical, specific. Be SUCCINCT.
     `.trim();
 
     // The summary text is now rendered as a normal Madame dialog bubble —
@@ -507,7 +521,7 @@ Speak as Madame Celandra — warm, lyrical, specific.
       $("#summary-text"),
       prompt,
       {
-        maxTokens: 900,
+        maxTokens: 600,
         fallback: (errMsg) => buildFallbackSummary(errMsg)
       }
     );
@@ -605,8 +619,12 @@ Speak as Madame Celandra — warm, lyrical, specific.
       const H = doc.internal.pageSize.getHeight();
       const MARGIN = 48;
 
-      // Background
-      doc.setFillColor(18, 5, 36); // deep purple
+      // Background — a richer plum than the flat #120524 used in the
+      // game's CSS variable, since the on-page purple is built up by
+      // layered radial gradients we can't reproduce in jsPDF. This base
+      // skews toward violet so the page reads unmistakably purple
+      // rather than blue-black on cool screens.
+      doc.setFillColor(36, 16, 56); // #241038 — deep plum
       doc.rect(0, 0, W, H, "F");
       // gold border
       doc.setDrawColor(217, 180, 74);
@@ -639,26 +657,34 @@ Speak as Madame Celandra — warm, lyrical, specific.
       const qLines = doc.splitTextToSize(state.question || "(no question was spoken)", W - MARGIN * 2);
       doc.text(qLines, MARGIN, MARGIN + 104);
 
-      // Cards row
-      const rowTop = MARGIN + 104 + qLines.length * 14 + 18;
+      // Cards row — each card sits between two captions:
+      //   above: the position label (PAST / PRESENT / FUTURE) in gold caps
+      //   below: the card's name (italic gold), with "(inverted)" if so
+      // This mirrors how the cards are presented in the game itself.
+      const POS_LABEL_H  = 16;  // gold caps caption above each card
+      const NAME_LABEL_H = 18;  // italic name + inverted tag below each card
       const cardW = 110;
       const cardH = 176;
       const gap = (W - MARGIN * 2 - cardW * 3) / 2;
+      const rowTop = MARGIN + 104 + qLines.length * 14 + 22;
+      const cardTop = rowTop + POS_LABEL_H;
 
-      // Cards are rendered as IMAGES ONLY — no position labels, no card
-      // name captions, no fallback symbol/text. If an image can't be
-      // loaded, the parchment-colored frame is left empty so nothing
-      // ugly bleeds into the layout.
       for (let i = 0; i < state.draws.length; i++) {
         const d = state.draws[i];
         const x = MARGIN + i * (cardW + gap);
-        const y = rowTop;
+        const cx = x + cardW / 2;
+
+        // POSITION label above the card — uppercase gold caps
+        doc.setFont("times", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(217, 180, 74);
+        doc.text(POSITIONS[i].toUpperCase(), cx, rowTop + 11, { align: "center" });
 
         // parchment-colored frame with a thin gold border
         doc.setDrawColor(217, 180, 74);
         doc.setLineWidth(0.8);
         doc.setFillColor(243, 231, 200);
-        doc.rect(x, y, cardW, cardH, "FD");
+        doc.rect(x, cardTop, cardW, cardH, "FD");
 
         // try to drop the card image on top of the frame; if it fails
         // (CORS, network, etc.) we silently leave the empty frame.
@@ -668,15 +694,40 @@ Speak as Madame Celandra — warm, lyrical, specific.
             dataURL = await rotate180DataURL(dataURL);
           }
           if (dataURL) {
-            doc.addImage(dataURL, "PNG", x, y, cardW, cardH, undefined, "FAST");
+            doc.addImage(dataURL, "PNG", x, cardTop, cardW, cardH, undefined, "FAST");
           }
         } catch {
           /* image unavailable — leave the parchment frame untouched */
         }
+
+        // CARD NAME caption below the card — italic gold, with the
+        // inverted indicator appended in a slightly dimmer ink so the
+        // name itself remains the dominant element.
+        const nameY = cardTop + cardH + 13;
+        doc.setFont("times", "italic");
+        doc.setFontSize(11);
+        doc.setTextColor(255, 216, 122);
+        if (d.reversed) {
+          // measure the name so we can right-pad an "(inverted)" tag
+          const nameW = doc.getTextWidth(d.card.name);
+          const tagText = " (inverted)";
+          doc.setFontSize(9);
+          const tagW = doc.getTextWidth(tagText);
+          doc.setFontSize(11);
+          const totalW = nameW + tagW;
+          const startX = cx - totalW / 2;
+          doc.text(d.card.name, startX, nameY);
+          doc.setFont("times", "italic");
+          doc.setFontSize(9);
+          doc.setTextColor(217, 180, 74);
+          doc.text(tagText, startX + nameW, nameY);
+        } else {
+          doc.text(d.card.name, cx, nameY, { align: "center" });
+        }
       }
 
-      // Reading text — sits just below the cards (no captions in between)
-      const textTop = rowTop + cardH + 24;
+      // Reading text — sits below the cards AND below the name labels.
+      const textTop = cardTop + cardH + NAME_LABEL_H + 22;
       doc.setFont("times", "bold");
       doc.setFontSize(13);
       doc.setTextColor(255, 216, 122);
@@ -695,8 +746,8 @@ Speak as Madame Celandra — warm, lyrical, specific.
       for (const line of lines) {
         if (y > bottomLimit) {
           doc.addPage();
-          // redraw page bg + border
-          doc.setFillColor(18, 5, 36);
+          // redraw page bg + border (same plum as page 1)
+          doc.setFillColor(36, 16, 56);
           doc.rect(0, 0, W, H, "F");
           doc.setDrawColor(217, 180, 74);
           doc.setLineWidth(1.2);
