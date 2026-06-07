@@ -6,10 +6,29 @@
 - **Live URL:** https://madame-celandra.pages.dev (or custom domain if configured)
 
 ## GitHub token
-Stored in `.github_token` (gitignored). Use it for pushes:
+Stored in `.github_token` (gitignored — never commit the token itself).
+
+## How to push changes (Claude does this — no Terminal needed)
+The sandbox can clone/push directly now that the repo is ~9MB. Standard workflow:
+
+```bash
+TOKEN=$(cat "/sessions/busy-practical-tesla/mnt/Madame Celandra/.github_token" | tr -d '[:space:]')
+REPO="https://${TOKEN}@github.com/dannyccash-web/madame_celandra.git"
+cd /tmp && rm -rf mc_push && git clone --depth=1 "$REPO" mc_push
+cd mc_push
+git config user.email "dannyccash@gmail.com"
+git config user.name "Danny Cash"
+
+# --- copy changed files from project folder into clone ---
+cp "/sessions/busy-practical-tesla/mnt/Madame Celandra/<file>" .
+
+git add -A
+git commit -m "<message>"
+git push origin main
+rm -rf /tmp/mc_push
 ```
-git remote set-url origin https://<token>@github.com/dannyccash-web/madame_celandra.git
-```
+
+Cloudflare auto-deploys within ~1 minute of push. Danny never needs to touch Terminal.
 
 ## Stack
 - Pure HTML/CSS/JS static site — no build step
