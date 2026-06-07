@@ -7,8 +7,12 @@
 
   // ---------- constants ----------
   const POSITIONS = ["The Past", "The Present", "The Future"];
-  // The proxy lives at /api/madame — your API key stays on the server.
-  const MADAME_URL = "/api/madame";
+  // When running inside a Capacitor native app, relative URLs resolve to
+  // capacitor://localhost — not Cloudflare. Detect native and use the full URL.
+  const IS_NATIVE = !!(window.Capacitor?.isNativePlatform?.());
+  const MADAME_URL = IS_NATIVE
+    ? "https://madame-celandra.pages.dev/api/madame"
+    : "/api/madame";
   // One reading per day — track the local date of the last completed reading.
   const LAST_READING_KEY = "madame_last_reading_date";
   const DAILY_LIMIT_ENABLED = true;
@@ -274,6 +278,7 @@
   // 1) start
   function wireStart() {
     $("#begin-btn").addEventListener("click", async () => {
+      hapticMedium();
       // Re-check at click time in case midnight rolled over mid-session.
       if (hasReadingToday()) {
         applyStartGate();
@@ -315,7 +320,7 @@
   }
 
   function wireQuestion() {
-    $("#ask-btn").addEventListener("click", onAsk);
+    $("#ask-btn").addEventListener("click", () => { hapticLight(); onAsk(); });
     $("#question-input").addEventListener("keydown", (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") onAsk();
     });
@@ -393,13 +398,42 @@
     deck.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onDrawCard(); }
     });
-    $("#card-continue-btn").addEventListener("click", onCardContinue);
+    $("#card-continue-btn").addEventListener("click", () => { hapticLight(); onCardContinue(); });
+  }
+
+  // ---------- native helpers ----------
+  function haptic(style = "MEDIUM") {
+    if (IS_NATIVE && window.Capacitor?.Plugins?.Haptics) {
+      window.Capacitor.Plugins.Haptics.impact({ style });
+    }
+  }
+
+  function hapticLight() { haptic("LIGHT"); }
+  function hapticMedium() { haptic("MEDIUM"); }
+  function hapticHeavy() { haptic("HEAVY"); }
+
+  function initNative() {
+    if (!IS_NATIVE) return;
+    const { StatusBar, SplashScreen } = window.Capacitor?.Plugins ?? {};
+    if (StatusBar) {
+      StatusBar.setStyle({ style: "DARK" });
+      StatusBar.setOverlaysWebView({ overlay: true });
+    }
+    if (SplashScreen) {
+      SplashScreen.hide({ fadeOutDuration: 400 });
+    }
+    // Prevent rubber-band overscroll on iOS
+    document.addEventListener("touchmove", (e) => {
+      if (e.target.closest(".scroll-allowed")) return;
+      e.preventDefault();
+    }, { passive: false });
   }
 
   async function onDrawCard() {
     const deck = $("#deck");
     if (deck.style.display === "none") return; // already drawn
 
+    hapticHeavy(); // card draw — most satisfying moment in the app
     const { card, reversed } = drawRandomCard();
     state.draws.push({ card, reversed, interpretation: "" });
 
@@ -622,6 +656,7 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
 
   function wireSummary() {
     $("#restart-btn").addEventListener("click", () => {
+      hapticLight();
       resetReading();
       applyStartGate();            // they've read today — the gate will now be showing
       showScreen("start-screen");
@@ -894,6 +929,7 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
 
   // ---------- boot ----------
   function init() {
+    initNative(); // sets up status bar, splash hide, and iOS overscroll prevention
     wireStart();
     wireQuestion();
     wireCardScreen();
