@@ -7,6 +7,7 @@
 const CACHE_VERSION = "madame-v1";
 
 // All static assets to pre-cache on install.
+// Images are WebP (~100KB each vs ~3MB original PNG).
 // The /api/madame endpoint is intentionally excluded — it must
 // always hit the network so Claude can give fresh readings.
 const PRECACHE_URLS = [
@@ -18,49 +19,47 @@ const PRECACHE_URLS = [
   "/manifest.json",
   "/icon-192.png",
   "/icon-512.png",
-  "/madame_celandra_start_background.png",
-  "/madame_celandra_question_background.png",
-  "/madame_celandra_select_background.png",
-  "/madame_celandra_table.png",
-  "/madame_celandre.png",
-  "/madame_celandre_logo.png",
-  // Card illustrations
-  "/tarot card illustrations/abundance.png",
-  "/tarot card illustrations/air.png",
-  "/tarot card illustrations/creation.png",
-  "/tarot card illustrations/death.png",
-  "/tarot card illustrations/destruction.png",
-  "/tarot card illustrations/earth.png",
-  "/tarot card illustrations/famine.png",
-  "/tarot card illustrations/fire.png",
-  "/tarot card illustrations/fortitude.png",
-  "/tarot card illustrations/frailty.png",
-  "/tarot card illustrations/ice.png",
-  "/tarot card illustrations/life.png",
-  "/tarot card illustrations/nourishment.png",
-  "/tarot card illustrations/scarcity.png",
-  "/tarot card illustrations/the_castle.png",
-  "/tarot card illustrations/the_deity.png",
-  "/tarot card illustrations/the_dragon.png",
-  "/tarot card illustrations/the_emperor.png",
-  "/tarot card illustrations/the_empress.png",
-  "/tarot card illustrations/the_hawk.png",
-  "/tarot card illustrations/the_jester.png",
-  "/tarot card illustrations/the_knight.png",
-  "/tarot card illustrations/the_moon.png",
-  "/tarot card illustrations/the_mountain.png",
-  "/tarot card illustrations/the_snake.png",
-  "/tarot card illustrations/the_staff.png",
-  "/tarot card illustrations/the_stars.png",
-  "/tarot card illustrations/the_sun.png",
-  "/tarot card illustrations/the_sword.png",
-  "/tarot card illustrations/the_unknown.png",
-  "/tarot card illustrations/the_witch.png",
-  "/tarot card illustrations/the_wizard.png",
-  "/tarot card illustrations/the_wolf.png",
-  "/tarot card illustrations/time.png",
-  "/tarot card illustrations/water.png",
-  // External font (Google Fonts — cache on first use, not pre-cached)
+  "/madame_celandra_start_background.webp",
+  "/madame_celandra_question_background.webp",
+  "/madame_celandra_select_background.webp",
+  "/madame_celandre_logo.webp",
+  "/madame_celandre.webp",
+  // Card illustrations (WebP, ~100KB each)
+  "/tarot card illustrations/abundance.webp",
+  "/tarot card illustrations/air.webp",
+  "/tarot card illustrations/creation.webp",
+  "/tarot card illustrations/death.webp",
+  "/tarot card illustrations/destruction.webp",
+  "/tarot card illustrations/earth.webp",
+  "/tarot card illustrations/famine.webp",
+  "/tarot card illustrations/fire.webp",
+  "/tarot card illustrations/fortitude.webp",
+  "/tarot card illustrations/frailty.webp",
+  "/tarot card illustrations/ice.webp",
+  "/tarot card illustrations/life.webp",
+  "/tarot card illustrations/nourishment.webp",
+  "/tarot card illustrations/scarcity.webp",
+  "/tarot card illustrations/the_castle.webp",
+  "/tarot card illustrations/the_deity.webp",
+  "/tarot card illustrations/the_dragon.webp",
+  "/tarot card illustrations/the_emperor.webp",
+  "/tarot card illustrations/the_empress.webp",
+  "/tarot card illustrations/the_hawk.webp",
+  "/tarot card illustrations/the_jester.webp",
+  "/tarot card illustrations/the_knight.webp",
+  "/tarot card illustrations/the_moon.webp",
+  "/tarot card illustrations/the_mountain.webp",
+  "/tarot card illustrations/the_snake.webp",
+  "/tarot card illustrations/the_staff.webp",
+  "/tarot card illustrations/the_stars.webp",
+  "/tarot card illustrations/the_sun.webp",
+  "/tarot card illustrations/the_sword.webp",
+  "/tarot card illustrations/the_unknown.webp",
+  "/tarot card illustrations/the_witch.webp",
+  "/tarot card illustrations/the_wizard.webp",
+  "/tarot card illustrations/the_wolf.webp",
+  "/tarot card illustrations/time.webp",
+  "/tarot card illustrations/water.webp",
 ];
 
 // ── Install: pre-cache all static assets ──────────────────────
@@ -102,10 +101,7 @@ self.addEventListener("fetch", (event) => {
 
       // Not in cache — fetch from network and cache for next time.
       return fetch(event.request).then((response) => {
-        // Only cache valid same-origin or opaque responses.
-        if (
-          response.ok || response.type === "opaque"
-        ) {
+        if (response.ok || response.type === "opaque") {
           const clone = response.clone();
           caches.open(CACHE_VERSION).then((cache) =>
             cache.put(event.request, clone)

@@ -77,9 +77,9 @@ body {
   inset: 0;
   background: rgba(10, 2, 24, 0.35);
 }
-.screen > .screen-bg.start    { background-image: url("madame_celandra_start_background.png"); }
-.screen > .screen-bg.question { background-image: url("madame_celandra_question_background.png"); }
-.screen > .screen-bg.select   { background-image: url("madame_celandra_select_background.png"); }
+.screen > .screen-bg.start    { background-image: url("madame_celandra_start_background.webp"); }
+.screen > .screen-bg.question { background-image: url("madame_celandra_question_background.webp"); }
+.screen > .screen-bg.select   { background-image: url("madame_celandra_select_background.webp"); }
 .screen > * { position: relative; z-index: 1; }
 
 /* ── subtle star-field backdrop ───────────────────────────── */
@@ -246,7 +246,7 @@ em { color: var(--gold-bright); font-style: italic; }
   height: 64px;
   border-radius: 50%;
   background:
-    url("madame_celandre.png") top center / 180% auto no-repeat,
+    url("madame_celandre.webp") top center / 180% auto no-repeat,
     radial-gradient(circle at 30% 30%, #e5d6b0, #a07c4f 60%, #3a1f12 100%);
   border: 2px solid var(--gold);
   box-shadow: 0 0 14px rgba(217, 180, 74, 0.4);
