@@ -630,6 +630,25 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
   }
 
   // ---------- PDF export ----------
+
+  // Fetch a font file and return it as a base64 string for jsPDF embedding.
+  const fontCache = new Map();
+  async function loadFontAsBase64(url) {
+    if (fontCache.has(url)) return fontCache.get(url);
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`Font load failed (${r.status}): ${url}`);
+    const buf = await r.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    const chunk = 8192;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    const b64 = btoa(binary);
+    fontCache.set(url, b64);
+    return b64;
+  }
+
   async function downloadPDF() {
     const btn = $("#download-btn");
     const oldLabel = btn.textContent;
@@ -643,6 +662,31 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
       const H = doc.internal.pageSize.getHeight();
       const MARGIN = 48;
 
+      // Load the game's actual fonts (Cinzel + Cormorant Garamond).
+      // Latin-subset TTFs served from the same origin — small and CORS-safe.
+      try {
+        const [cinzelB64, cgRegB64, cgItalB64] = await Promise.all([
+          loadFontAsBase64("/fonts/cinzel-700.ttf"),
+          loadFontAsBase64("/fonts/cormorant-400.ttf"),
+          loadFontAsBase64("/fonts/cormorant-400i.ttf"),
+        ]);
+        doc.addFileToVFS("cinzel-700.ttf",     cinzelB64);
+        doc.addFileToVFS("cormorant-400.ttf",  cgRegB64);
+        doc.addFileToVFS("cormorant-400i.ttf", cgItalB64);
+        doc.addFont("cinzel-700.ttf",     "Cinzel",             "normal");
+        doc.addFont("cormorant-400.ttf",  "CormorantGaramond",  "normal");
+        doc.addFont("cormorant-400i.ttf", "CormorantGaramond",  "italic");
+      } catch (fontErr) {
+        // Font load failed — fall back to built-in Times so the PDF still works.
+        console.warn("Custom font load failed, falling back to Times:", fontErr);
+      }
+
+      // Helper: use custom fonts if loaded, otherwise fall back to Times.
+      const hasCustomFonts = doc.getFontList()["Cinzel"] !== undefined;
+      function setDisplay()       { hasCustomFonts ? doc.setFont("Cinzel",            "normal") : doc.setFont("times", "bold");   }
+      function setBodyNormal()    { hasCustomFonts ? doc.setFont("CormorantGaramond", "normal") : doc.setFont("times", "normal"); }
+      function setBodyItalic()    { hasCustomFonts ? doc.setFont("CormorantGaramond", "italic") : doc.setFont("times", "italic"); }
+
       // Background — a richer plum than the flat #120524 used in the
       // game's CSS variable, since the on-page purple is built up by
       // layered radial gradients we can't reproduce in jsPDF. This base
@@ -655,18 +699,18 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
       doc.setLineWidth(1.2);
       doc.rect(MARGIN / 2, MARGIN / 2, W - MARGIN, H - MARGIN);
 
-      // Title
+      // Title — Cinzel bold display font, like the game header
       doc.setTextColor(217, 180, 74);
-      doc.setFont("times", "bold");
+      setDisplay();
       doc.setFontSize(28);
       doc.text("Madame Celandra", W / 2, MARGIN + 20, { align: "center" });
-      doc.setFont("times", "italic");
+      setBodyItalic();
       doc.setFontSize(13);
       doc.text("— a tarot reading —", W / 2, MARGIN + 40, { align: "center" });
 
       // Date
       doc.setTextColor(243, 231, 200);
-      doc.setFont("times", "normal");
+      setBodyNormal();
       doc.setFontSize(10);
       const dateStr = new Date().toLocaleDateString(undefined, { year:"numeric", month:"long", day:"numeric" });
       doc.text(dateStr, W / 2, MARGIN + 58, { align: "center" });
@@ -674,9 +718,9 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
       // Question
       doc.setFontSize(12);
       doc.setTextColor(255, 216, 122);
-      doc.setFont("times", "bold");
+      setDisplay();
       doc.text("Your question", MARGIN, MARGIN + 88);
-      doc.setFont("times", "italic");
+      setBodyItalic();
       doc.setTextColor(243, 231, 200);
       const qLines = doc.splitTextToSize(state.question || "(no question was spoken)", W - MARGIN * 2);
       doc.text(qLines, MARGIN, MARGIN + 104);
@@ -698,8 +742,8 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
         const x = MARGIN + i * (cardW + gap);
         const cx = x + cardW / 2;
 
-        // POSITION label above the card — uppercase gold caps
-        doc.setFont("times", "bold");
+        // POSITION label above the card — Cinzel caps
+        setDisplay();
         doc.setFontSize(9);
         doc.setTextColor(217, 180, 74);
         doc.text(POSITIONS[i].toUpperCase(), cx, rowTop + 11, { align: "center" });
@@ -724,11 +768,10 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
           /* image unavailable — leave the parchment frame untouched */
         }
 
-        // CARD NAME caption below the card — italic gold, with the
-        // inverted indicator appended in a slightly dimmer ink so the
-        // name itself remains the dominant element.
+        // CARD NAME caption below the card — Cormorant Garamond italic,
+        // with the inverted indicator appended in a slightly dimmer ink.
         const nameY = cardTop + cardH + 13;
-        doc.setFont("times", "italic");
+        setBodyItalic();
         doc.setFontSize(11);
         doc.setTextColor(255, 216, 122);
         if (d.reversed) {
@@ -741,7 +784,7 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
           const totalW = nameW + tagW;
           const startX = cx - totalW / 2;
           doc.text(d.card.name, startX, nameY);
-          doc.setFont("times", "italic");
+          setBodyItalic();
           doc.setFontSize(9);
           doc.setTextColor(217, 180, 74);
           doc.text(tagText, startX + nameW, nameY);
@@ -752,12 +795,12 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
 
       // Reading text — sits below the cards AND below the name labels.
       const textTop = cardTop + cardH + NAME_LABEL_H + 22;
-      doc.setFont("times", "bold");
+      setDisplay();
       doc.setFontSize(13);
       doc.setTextColor(255, 216, 122);
       doc.text("Madame Celandra's reading", MARGIN, textTop);
 
-      doc.setFont("times", "normal");
+      setBodyNormal();
       doc.setFontSize(11);
       doc.setTextColor(243, 231, 200);
       const body = state.summary || "(no reading was given)";
@@ -776,7 +819,7 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
           doc.setDrawColor(217, 180, 74);
           doc.setLineWidth(1.2);
           doc.rect(MARGIN / 2, MARGIN / 2, W - MARGIN, H - MARGIN);
-          doc.setFont("times", "normal");
+          setBodyNormal();
           doc.setFontSize(11);
           doc.setTextColor(243, 231, 200);
           y = MARGIN + 20;
@@ -786,7 +829,7 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
       }
 
       // Footer
-      doc.setFont("times", "italic");
+      setBodyItalic();
       doc.setFontSize(9);
       doc.setTextColor(217, 180, 74);
       doc.text("— may the cards walk softly with you —", W / 2, H - MARGIN / 2 - 2, { align: "center" });
