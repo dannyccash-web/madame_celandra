@@ -161,6 +161,9 @@
     </section>
   </div>
 
+  <!-- Looping soundtrack — starts on first user interaction (browser autoplay policy) -->
+  <audio id="soundtrack" src="oracles_spell.mp3" loop preload="auto"></audio>
+
   <script src="cards.js"></script>
   <script src="game.js"></script>
   <script>
@@ -172,6 +175,18 @@
         });
       });
     }
+
+    // Start soundtrack on first user gesture (required by browser autoplay policy).
+    (function () {
+      const audio = document.getElementById("soundtrack");
+      function startMusic() {
+        audio.play().catch(() => {});
+        document.removeEventListener("click", startMusic);
+        document.removeEventListener("touchstart", startMusic);
+      }
+      document.addEventListener("click", startMusic);
+      document.addEventListener("touchstart", startMusic);
+    })();
   </script>
 </body>
 </html>

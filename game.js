@@ -211,7 +211,7 @@
     const taken = new Set(state.draws.map((d) => d.card.name));
     let pool = TAROT_DECK.filter((c) => !taken.has(c.name));
     const card = pool[Math.floor(Math.random() * pool.length)];
-    const reversed = Math.random() < 0.45; // slight bias toward upright
+    const reversed = Math.random() < 0.5; // true 50/50
     return { card, reversed };
   }
 

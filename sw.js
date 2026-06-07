@@ -4,7 +4,7 @@
 //  API calls to /api/madame are always network-only.
 // ============================================================
 
-const CACHE_VERSION = "madame-v1";
+const CACHE_VERSION = "madame-v2";
 
 // All static assets to pre-cache on install.
 // Images are WebP (~100KB each vs ~3MB original PNG).
@@ -19,6 +19,7 @@ const PRECACHE_URLS = [
   "/manifest.json",
   "/icon-192.png",
   "/icon-512.png",
+  "/oracles_spell.mp3",
   "/madame_celandra_start_background.webp",
   "/madame_celandra_question_background.webp",
   "/madame_celandra_select_background.webp",
