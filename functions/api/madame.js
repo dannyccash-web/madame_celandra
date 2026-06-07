@@ -7,7 +7,7 @@
 //   ANTHROPIC_API_KEY — your Anthropic API key (starts with sk-ant-)
 //
 // Optional env vars (with defaults):
-//   MADAME_MODEL        — model name, default "claude-sonnet-4-5-20250929"
+//   MADAME_MODEL        — model name, default "claude-sonnet-4-6"
 //   MADAME_MAX_TOKENS   — hard ceiling on any single response, default 1500
 
 const MADAME_SYSTEM = `
@@ -90,7 +90,7 @@ export async function onRequestPost(context) {
   const requested    = Number(body?.max_tokens) || 600;
   const safeMaxTokens = Math.min(Math.max(requested, 64), hardCeiling);
 
-  const model = env.MADAME_MODEL || "claude-sonnet-4-5-20250929";
+  const model = env.MADAME_MODEL || "claude-sonnet-4-6";
 
   let upstream;
   try {

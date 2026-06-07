@@ -4,6 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#120524" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Celandra" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="manifest" href="manifest.json" />
   <title>Madame Celandra — a tarot reading</title>
   <link rel="stylesheet" href="styles.css" />
   <!-- jsPDF for client-side PDF export -->
@@ -158,5 +163,15 @@
 
   <script src="cards.js"></script>
   <script src="game.js"></script>
+  <script>
+    // Register the PWA service worker
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch((err) => {
+          console.warn("[SW] Registration failed:", err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>

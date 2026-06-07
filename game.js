@@ -11,9 +11,7 @@
   const MADAME_URL = "/api/madame";
   // One reading per day — track the local date of the last completed reading.
   const LAST_READING_KEY = "madame_last_reading_date";
-  // Temporarily off while the game is being built — flip back to true to
-  // re-enable the one-reading-per-day gate.
-  const DAILY_LIMIT_ENABLED = false;
+  const DAILY_LIMIT_ENABLED = true;
 
   // ---------- state ----------
   const state = {
@@ -41,10 +39,21 @@
     return typeOut(el, text);
   }
 
+  // Each call to typeOut gets its own skip flag. Tapping the bubble sets it,
+  // which collapses the remaining characters instantly.
   async function typeOut(el, text, speed = 18) {
     el.classList.add("typing");
     el.textContent = "";
+
+    let skipped = false;
+    const skip = () => { skipped = true; };
+    el.addEventListener("click", skip, { once: true });
+
     for (let i = 0; i < text.length; i++) {
+      if (skipped) {
+        el.textContent = text;
+        break;
+      }
       el.textContent += text[i];
       // slightly slower on punctuation, faster on spaces
       const ch = text[i];
@@ -54,6 +63,7 @@
       else if (ch === " ") delay = speed * 0.6;
       await sleep(delay + (Math.random() * 10 - 5));
     }
+    el.removeEventListener("click", skip);
     el.classList.remove("typing");
   }
 
@@ -149,16 +159,17 @@
   function scrubMadameText(text) {
     if (!text) return text;
     return text
-      // remove "*scene-direction*" or "*emphasis*" entirely — the model
-      // shouldn't be using these at all, so dropping them keeps the prose
-      // clean even when something slips through.
+      // remove "*scene-direction*" or "*emphasis*" entirely
       .replace(/\*[^*\n]+\*/g, "")
       // strip any remaining stray asterisks
       .replace(/\*+/g, "")
-      // tidy up the whitespace left behind by the strips above
+      // tidy up whitespace left behind
       .replace(/[ \t]{2,}/g, " ")
       .replace(/[ \t]+([,.;:!?])/g, "$1")
-      .replace(/\n{3,}/g, "\n\n")
+      // collapse 3+ newlines to a single blank line; collapse 2 to one
+      // so the pre-wrap summary doesn't show big blank gaps
+      .replace(/\n{3,}/g, "\n")
+      .replace(/\n{2}/g, "\n")
       .trim();
   }
 
@@ -220,20 +231,21 @@
       frontEl.classList.add("fallback");
       frontEl.innerHTML = `
         <div class="ph">
-          <div class="sym">${suitSymbol(card.suit)}</div>
+          <div class="sym">${suitSymbol(card)}</div>
         </div>
       `;
     };
     frontEl.appendChild(img);
   }
-  function suitSymbol(suit) {
-    switch (suit) {
-      case "wands":     return "🜂"; // fire alchemical
-      case "cups":      return "🜄"; // water alchemical
-      case "swords":    return "🜁"; // air alchemical
-      case "pentacles": return "🜃"; // earth alchemical
-      default:          return "✦";
-    }
+  // Custom deck has no suit — use the card's image filename as a rough proxy
+  // so the fallback placeholder shows something more meaningful than a generic star.
+  function suitSymbol(card) {
+    const img = (card?.img || "").toLowerCase();
+    if (/fire|dragon|sun|destruction/.test(img))  return "🜂"; // fire
+    if (/water|moon|ice|famine/.test(img))         return "🜄"; // water
+    if (/air|hawk|wind/.test(img))                 return "🜁"; // air
+    if (/earth|castle|emperor/.test(img))          return "🜃"; // earth
+    return "✦"; // everything else — witch, wolf, deity, time, etc.
   }
 
   // ---------- position / orientation guidance ----------
@@ -322,16 +334,7 @@
     $("#q-input-wrap").style.display = "none";
     $("#ask-btn").disabled = true;
 
-    // Show the "Continue to the Cards" button immediately, but inactive
-    // until Madame has finished speaking — the seeker can see what's
-    // coming next without being able to skip past her.
-    const continueRow = $("#continue-to-cards-row");
-    const continueBtn = $("#continue-to-cards");
-    continueBtn.disabled = true;
-    continueRow.style.display = "flex";
-
-    // Shuffle visual runs alongside Madame's reply so the page doesn't
-    // sit on the typing-dots and then sit again on a separate shuffle.
+    // Shuffle visual runs alongside Madame's reply.
     $("#shuffle-stage").classList.add("active");
 
     const intro = $("#madame-intro");
@@ -341,7 +344,10 @@
       { maxTokens: 240, fallback: "I hear you — and I feel the weight of what you carry. Breathe with me. I shall shuffle the cards now; hold your question close." }
     );
 
-    // Madame is done — the seeker may now proceed.
+    // Madame is done — show the continue button now.
+    const continueRow = $("#continue-to-cards-row");
+    const continueBtn = $("#continue-to-cards");
+    continueRow.style.display = "flex";
     continueBtn.disabled = false;
   }
 
@@ -468,6 +474,12 @@ Do not forecast or mention the other two cards — they have not been drawn yet.
   async function onCardContinue() {
     state.currentDraw += 1;
     if (state.currentDraw >= 3) {
+      // Brief in-character beat — show a transitional message in Madame's
+      // bubble while the summary screen loads, so the jump doesn't feel abrupt.
+      const interpEl = $("#card-interp");
+      $("#card-continue-row").style.display = "none";
+      await typeOut(interpEl, "All three cards now lie before us. Let me weave what they say together…");
+      await sleep(600);
       await goToSummary();
       return;
     }
@@ -529,9 +541,8 @@ Hard bans (do not use, even paraphrased): "trust the journey", "honor the patter
 Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards' verdict. Be SUCCINCT.
     `.trim();
 
-    // The summary text is now rendered as a normal Madame dialog bubble —
-    // no separate "She weaves…" intro box anymore. madameSays() will show
-    // the thinking dots in the bubble while it waits for the model.
+    // The summary text is rendered as a normal Madame dialog bubble.
+    // madameSays() shows the thinking dots while waiting for the model.
     const text = await madameSays(
       $("#summary-text"),
       prompt,
@@ -566,16 +577,14 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
   }
 
   function buildFallbackSummary(errMsg = "") {
-    // Only fires when the proxy is unreachable or returns an error. We now
-    // surface the underlying reason inline so we can actually diagnose
-    // why Madame went silent during summary generation.
+    // Log the real cause for debugging; never surface it to the seeker.
+    if (errMsg) console.error("[Madame Celandra] Summary fallback triggered:", errMsg);
     const lines = state.draws.map((d, i) => {
       const o = d.reversed ? "inverted" : "upright";
       const m = d.reversed ? d.card.reversed : d.card.upright;
-      return `${POSITIONS[i]} — *${d.card.name}* (${o}): ${m}.`;
+      return `${POSITIONS[i]} — ${d.card.name} (${o}): ${m}.`;
     }).join("\n\n");
-    const why = errMsg ? `\n\n(The spirits stumbled on: ${errMsg})` : "";
-    return `The veil is thick tonight and my words do not travel far. Still — I will not send you away empty-handed. Your cards stand thus:\n\n${lines}\n\nSit with them a moment, and return to me when the mist has lifted, so that I may speak of your question in full.${why}`;
+    return `The veil is thick tonight and my words do not travel far. Still — I will not send you away empty-handed. Your cards stand thus:\n\n${lines}\n\nSit with them a moment, and return to me when the mist has lifted, so that I may speak of your question in full.`;
   }
 
   function renderSummaryCards() {
@@ -782,7 +791,9 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
       doc.setTextColor(217, 180, 74);
       doc.text("— may the cards walk softly with you —", W / 2, H - MARGIN / 2 - 2, { align: "center" });
 
-      doc.save(`madame-celandra-reading-${Date.now()}.pdf`);
+      const d = new Date();
+      const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      doc.save(`madame-celandra-${stamp}.pdf`);
     } catch (err) {
       console.error(err);
       alert("I could not seal the reading to parchment: " + (err?.message || "unknown error"));

@@ -349,7 +349,7 @@ em { color: var(--gold-bright); font-style: italic; }
   background: rgba(18, 5, 36, 0.6);
   border: 1.5px solid rgba(217, 180, 74, 0.55);
   border-radius: 4px;
-  resize: vertical;
+  resize: none;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
