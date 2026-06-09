@@ -1,7 +1,7 @@
 {
   "appId": "com.madamecelandra.app",
   "appName": "Madame Celandra",
-  "webDir": ".",
+  "webDir": "www",
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 2000,

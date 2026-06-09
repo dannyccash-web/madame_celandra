@@ -4,11 +4,10 @@
   "description": "Madame Celandra — AI tarot reading app",
   "private": true,
   "scripts": {
-    "build:ios": "npx cap sync ios",
-    "build:android": "npx cap sync android",
+    "build": "node build.js",
+    "sync": "node build.js && npx cap sync",
     "open:ios": "npx cap open ios",
-    "open:android": "npx cap open android",
-    "sync": "npx cap sync"
+    "open:android": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/android": "^6.0.0",
