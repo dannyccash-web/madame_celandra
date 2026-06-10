@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Madame Celandra</string>
+    <string name="title_activity_main">Madame Celandra</string>
+    <string name="package_name">com.madamecelandra.app</string>
+    <string name="custom_url_scheme">com.madamecelandra.app</string>
+</resources>

@@ -1,0 +1,28 @@
+workflows:
+  android-release:
+    name: Android Release (Google Play)
+    max_build_duration: 60
+    environment:
+      android_signing:
+        - madame_celandra_keystore
+      node: 22.22.0
+      vars:
+        PACKAGE_NAME: "com.madamecelandra.app"
+    scripts:
+      - name: Install dependencies
+        script: npm install
+      - name: Build web assets into www/
+        script: node build.js
+      - name: Sync web assets into Android project
+        script: npx cap sync android
+      - name: Build release AAB
+        script: |
+          cd android
+          ./gradlew bundleRelease
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true
