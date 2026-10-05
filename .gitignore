@@ -19,3 +19,8 @@ www/
 
 # Wrangler
 .wrangler/
+
+# Android signing keystore (never commit)
+signing/
+*.keystore
+*.jks
