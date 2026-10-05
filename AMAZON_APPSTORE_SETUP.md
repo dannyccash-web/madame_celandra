@@ -87,8 +87,12 @@
 
 **Pricing tab:**
 - Set to **Paid**
-- Price: **$4.99**
+- Price: **$3.99** (includes 200 readings)
+- Apply Amazon DRM: **Yes**
 - Amazon automatically handles international pricing
+
+**In-App Items:**
+- Add a **Consumable**: SKU `madame_readings_100`, title "100 Readings", price **$1.99**
 
 ---
 

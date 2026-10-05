@@ -45,13 +45,21 @@ Cloudflare auto-deploys within ~1 minute of push. Danny never needs to touch Ter
 35-card deck (not Rider-Waite-Smith). Cards defined in `cards.js`.
 Full card definitions with lore in `custom_tarot_deck_card_definitions.txt`.
 
-## Daily limit
-`DAILY_LIMIT_ENABLED = true` in `game.js` — one reading per local calendar day, enforced via localStorage.
+## Readings & purchases (see PRICING.md)
+- Paid app ($3.99) includes 200 readings; consumable IAP `madame_readings_100` ($1.99) adds 100. No daily limit.
+- Server ledger: Cloudflare D1 (binding `DB`), logic in `lib/credits.js`; endpoints
+  `functions/api/account.js`, `session.js`, `purchase.js`, and `madame.js` (now requires a session).
+- Cloudflare env: `ANTHROPIC_API_KEY`, `APP_KEY`, `AMAZON_SHARED_SECRET`, optional `AMAZON_RVS_SANDBOX=true` while testing.
+- The app key is NOT in the repo: Codemagic's `madame_secrets` group holds `MADAME_APP_KEY`, and
+  `build.js` writes it into `www/app-config.js`. Root `app-config.js` is an empty placeholder (web gets no key).
+- Native IAP bridge: `android/app/src/main/java/com/madamecelandra/app/AmazonIapPlugin.java`
+  (Amazon Appstore SDK 3.0.9). Needs `android/app/src/main/assets/AppstoreAuthenticationKey.pem`.
+- The website shows an "get the app" message instead of readings.
 
 ## Running locally
 ```bash
 npm install -g wrangler
-echo 'ANTHROPIC_API_KEY="sk-ant-..."' > .dev.vars
-wrangler pages dev .
+printf 'ANTHROPIC_API_KEY="sk-ant-..."\nAPP_KEY="dev"\nAMAZON_SHARED_SECRET="..."\n' > .dev.vars
+wrangler pages dev . --d1 DB=local-db
 # visit http://localhost:8788
 ```

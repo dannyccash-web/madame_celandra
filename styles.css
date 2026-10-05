@@ -649,7 +649,21 @@ em { color: var(--gold-bright); font-style: italic; }
   white-space: pre-wrap;
 }
 
-/* ── One-reading-per-day gate on the start screen ─────────── */
+/* ── Readings remaining (under Begin) ─────────────────────── */
+#start-screen > .readings-left {
+  position: relative;
+  z-index: 2;
+  margin-top: -6px;
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.85;
+  min-height: 1em;
+}
+
+/* ── Start-screen gate (loading / out of readings / web) ──── */
 #start-screen > .gate-wrap {
   position: relative;
   z-index: 2;
@@ -664,6 +678,8 @@ em { color: var(--gold-bright); font-style: italic; }
 #start-screen > .gate-wrap .madame {
   margin-bottom: 0;
 }
+#start-screen > .gate-wrap .gate-actions { margin-top: 16px; }
+#start-screen > .gate-wrap .gate-actions .btn { margin-top: 0; text-decoration: none; }
 
 /* ── loading indicator ────────────────────────────────────── */
 .thinking {

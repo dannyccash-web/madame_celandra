@@ -5,10 +5,18 @@
 //
 // Required environment variable (set in Cloudflare dashboard):
 //   ANTHROPIC_API_KEY — your Anthropic API key (starts with sk-ant-)
+//   plus the DB binding and APP_KEY described in lib/credits.js
+//
+// Every call must come from the native app (X-Madame-App-Key header) and
+// carry { userId, sessionId }. The session's second call spends one reading.
 //
 // Optional env vars (with defaults):
 //   MADAME_MODEL        — model name, default "claude-sonnet-4-6"
 //   MADAME_MAX_TOKENS   — hard ceiling on any single response, default 1500
+
+import {
+  json, preflight, checkConfigAndKey, cleanUserId, ensureSchema, authorizeCall,
+} from "../../lib/credits.js";
 
 const MADAME_SYSTEM = `
 You are Madame Celandra, a mystical tarot reader with a warm, theatrical, old-world air.
@@ -42,24 +50,8 @@ Formatting rules:
 - Keep each response within the word limit given in the user message.
 `.trim();
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin":  "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Max-Age":       "86400",
-};
-
-function json(status, body, extraHeaders = {}) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS, ...extraHeaders },
-  });
-}
-
 // Preflight
-export async function onRequestOptions() {
-  return new Response(null, { status: 204, headers: CORS_HEADERS });
-}
+export const onRequestOptions = preflight;
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -67,12 +59,20 @@ export async function onRequestPost(context) {
   if (!env.ANTHROPIC_API_KEY) {
     return json(500, { error: "Server not configured. Missing ANTHROPIC_API_KEY." });
   }
+  const denied = checkConfigAndKey(request, env);
+  if (denied) return denied;
 
   let body;
   try {
     body = await request.json();
   } catch {
     return json(400, { error: "Invalid JSON body." });
+  }
+
+  const userId = cleanUserId(body?.userId);
+  const sessionId = typeof body?.sessionId === "string" ? body.sessionId.slice(0, 64) : "";
+  if (!userId || !sessionId) {
+    return json(400, { error: "`userId` and `sessionId` are required." });
   }
 
   const prompt = typeof body?.prompt === "string" ? body.prompt.trim() : "";
@@ -91,6 +91,10 @@ export async function onRequestPost(context) {
   const safeMaxTokens = Math.min(Math.max(requested, 64), hardCeiling);
 
   const model = env.MADAME_MODEL || "claude-sonnet-4-6";
+
+  await ensureSchema(env.DB);
+  const auth = await authorizeCall(env.DB, userId, sessionId);
+  if (!auth.ok) return auth.response;
 
   let upstream;
   try {
@@ -131,6 +135,7 @@ export async function onRequestPost(context) {
     text: text || "…the cards are silent just now.",
     usage: data?.usage || null,
     model: data?.model || model,
+    balance: auth.balance,
   });
 }
 

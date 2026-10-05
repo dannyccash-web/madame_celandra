@@ -24,6 +24,16 @@
 
         </activity>
 
+        <!-- Amazon Appstore In-App Purchasing -->
+        <receiver
+            android:name="com.amazon.device.iap.ResponseReceiver"
+            android:exported="true"
+            android:permission="com.amazon.inapp.purchasing.Permission.NOTIFY">
+            <intent-filter>
+                <action android:name="com.amazon.inapp.purchasing.NOTIFY" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -34,6 +44,12 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
     </application>
+
+    <!-- Let the app find the Amazon Appstore / App Tester (Android 11+) -->
+    <queries>
+        <package android:name="com.amazon.venezia" />
+        <package android:name="com.amazon.sdktestclient" />
+    </queries>
 
     <!-- Permissions -->
 

@@ -1,40 +1,40 @@
 # Madame Celandra — Monetization & Pricing
 
 ## Model
-**One-time download with a credit pack system.**
-No subscriptions. Users buy the app once and get an included credit pack, then buy more when they run out.
+**Paid download + consumable refill.** No subscriptions.
 
-## Pricing
+| Item | Price | What you get |
+|------|-------|--------------|
+| App download (Amazon Appstore) | **$3.99** | 200 readings |
+| Refill (in-app purchase, consumable) | **$1.99** | +100 readings |
 
-| Item | Price | Notes |
-|------|-------|-------|
-| App download | Free | Lowers barrier to entry |
-| Starter pack (included) | — | Bundled with first IAP |
-| First reading pack | **$4.99** → 100 readings | ~3 months of daily use |
-| Refill pack | **$3.99** → 150 readings | Rewards returning users |
+- No daily limit — readings can be used at any pace.
+- One reading = one full three-card session. The reading is spent when the
+  seeker submits their question (Madame's greeting is free).
+- The website (madame-celandra.pages.dev) no longer gives readings; it
+  points visitors to the Amazon Appstore.
 
-> **Rationale:** claude-sonnet-4-6 costs ~$0.004–0.007 per reading. At 1 reading/day, that's ~$1.50–2.50/year per active user in API costs. App stores take 30%, so $4.99 → ~$3.49 net. A 100-reading pack covers ~$0.50–0.70 in API costs, leaving healthy margin. Users who lapse and return buy a refill — this structure captures revenue from re-engagement.
+## How it's enforced (server-side)
+- Ledger lives in **Cloudflare D1** (binding `DB`), code in `lib/credits.js`.
+- Accounts are keyed by the **Amazon user ID** (from Amazon IAP `getUserData`),
+  so reinstalling or clearing app data does not reset the count.
+- First launch creates the account with 200 readings.
+- Refill receipts are verified with Amazon's **Receipt Verification Service**
+  and credited exactly once per receipt ID.
+- `/api/madame` only answers calls carrying the app key + a valid reading
+  session, so the Claude API key can't be used for free from outside the app.
+- Abuse limits: 3 new accounts per IP per day; 500 new accounts per day total
+  (`MAX_NEW_ACCOUNTS_PER_DAY` env var to change).
 
-## Daily Limit
-- **Max 1 reading per calendar day** (enforced client-side now; move server-side before launch)
-- This makes the math above conservative — real API costs will be lower than worst-case
+## IAP item
+| SKU | Type | Price |
+|-----|------|-------|
+| `madame_readings_100` | Consumable | $1.99 |
 
-## Comparable Apps
-- Co-Star: Free + $2.99–$4.99 IAP
-- The Pattern: Free + subscription
-- Golden Thread Tarot: $4.99 one-time (card reference only, no AI)
-- Labyrinthos: Free + $9.99 premium
+## Margins (rough)
+claude-sonnet-4-6 costs ~$0.004–0.007 per reading (6 model calls).
+- $3.99 − 30% store fee ≈ $2.79 net; 200 readings ≈ $0.80–1.40 API cost.
+- $1.99 − 30% ≈ $1.39 net; 100 readings ≈ $0.40–0.70 API cost.
 
-## App Store Fees
-- Apple App Store: 30% (15% for small developers earning < $1M/year via Small Business Program)
-- Google Play: 30% (15% for first $1M/year)
-
-## What Needs Building for This Model
-1. Server-side credit ledger (Cloudflare Workers KV) — one entry per device/user token
-2. StoreKit 2 (iOS) + Google Play Billing integration in Capacitor
-3. Capacitor IAP plugin (e.g., `@capgo/capacitor-purchases` or `capacitor-purchases` via RevenueCat)
-4. "You've used your reading for today" gate becomes "You have X readings remaining"
-
-## Legal / App Store Notes
-- Apple requires "for entertainment purposes only" disclaimer for fortune-telling apps
-- Add to: onboarding screen, App Store description, privacy policy
+## Legal / store notes
+- Include "for entertainment purposes only" in the store description.

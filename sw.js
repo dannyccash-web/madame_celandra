@@ -4,7 +4,7 @@
 //  API calls to /api/madame are always network-only.
 // ============================================================
 
-const CACHE_VERSION = "madame-v2";
+const CACHE_VERSION = "madame-v3";
 
 // All static assets to pre-cache on install.
 // Images are WebP (~100KB each vs ~3MB original PNG).

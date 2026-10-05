@@ -25,9 +25,11 @@
       <img class="logo-img" src="madame_celandre_logo.webp"
            alt="Madame Celandra — a tarot reading" />
 
-      <button class="btn" id="begin-btn">Begin Reading</button>
+      <button class="btn" id="begin-btn" style="display:none;">Begin Reading</button>
+      <div class="readings-left" id="readings-left" aria-live="polite"></div>
 
-      <!-- Shown only when the seeker has already had a reading today -->
+      <!-- Madame speaks here when the seeker can't begin: loading, out of
+           readings (with the refill purchase), offline, or on the website. -->
       <div class="gate-wrap" id="start-gate" style="display:none;">
         <div class="madame">
           <div class="avatar" aria-hidden="true"></div>
@@ -35,6 +37,13 @@
             <div class="name">Madame Celandra</div>
             <div class="bubble" id="gate-message"></div>
           </div>
+        </div>
+        <div class="btn-row gate-actions" id="gate-actions">
+          <button class="btn" id="buy-btn" style="display:none;">100 More Readings</button>
+          <button class="btn btn-ghost" id="retry-btn" style="display:none;">Try Again</button>
+          <a class="btn" id="store-link" style="display:none;"
+             href="https://www.amazon.com/gp/mas/dl/android?p=com.madamecelandra.app"
+             target="_blank" rel="noopener">Get the App</a>
         </div>
       </div>
     </section>
@@ -164,6 +173,8 @@
   <!-- Looping soundtrack — starts on first user interaction (browser autoplay policy) -->
   <audio id="soundtrack" src="oracles_spell.mp3" loop preload="auto"></audio>
 
+  <!-- Native build overwrites this with the real app key (see build.js) -->
+  <script src="app-config.js"></script>
   <script src="cards.js"></script>
   <script src="game.js"></script>
   <script>

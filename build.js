@@ -62,4 +62,15 @@ for (const item of ITEMS) {
   }
 }
 
+// Native-only config. The app key is injected at build time from the
+// MADAME_APP_KEY environment variable (set in Codemagic) so it never lands
+// in the public GitHub repo or on the website.
+const appKey = process.env.MADAME_APP_KEY || "";
+if (!appKey) console.warn("  ⚠ MADAME_APP_KEY is not set — the app will not be able to reach Madame's server.");
+fs.writeFileSync(
+  path.join(DEST, "app-config.js"),
+  `window.MADAME_CONFIG = ${JSON.stringify({ appKey })};\n`
+);
+console.log(`  ✓ app-config.js${appKey ? "" : " (empty key)"}`);
+
 console.log(`\nBuild complete → www/ (${copied} items copied, ${skipped} skipped)`);

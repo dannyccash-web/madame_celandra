@@ -10,12 +10,27 @@
   // When running inside a Capacitor native app, relative URLs resolve to
   // capacitor://localhost — not Cloudflare. Detect native and use the full URL.
   const IS_NATIVE = !!(window.Capacitor?.isNativePlatform?.());
-  const MADAME_URL = IS_NATIVE
-    ? "https://madame-celandra.pages.dev/api/madame"
-    : "/api/madame";
-  // One reading per day — track the local date of the last completed reading.
-  const LAST_READING_KEY = "madame_last_reading_date";
-  const DAILY_LIMIT_ENABLED = true;
+  const API_BASE = IS_NATIVE ? "https://madame-celandra.pages.dev" : "";
+  // Injected into www/app-config.js at build time (see build.js).
+  const APP_KEY = (window.MADAME_CONFIG && window.MADAME_CONFIG.appKey) || "";
+
+  // ---------- readings & purchases ----------
+  // The app is a paid download that includes 200 readings. When they run
+  // out, the seeker can buy 100 more through Amazon In-App Purchasing.
+  // The server (functions/api/*) keeps the real count; the app only shows it.
+  const REFILL_SKU = "madame_readings_100";
+  const REFILL_FALLBACK_PRICE = "$1.99";
+  const APPSTORE_URL = "https://www.amazon.com/gp/mas/dl/android?p=com.madamecelandra.app";
+  const Iap = () => window.Capacitor?.Plugins?.AmazonIap;
+
+  const account = {
+    status: "loading",   // loading | ready | error | web
+    userId: null,
+    balance: null,
+    sessionId: null,
+    refillPrice: REFILL_FALLBACK_PRICE,
+    buying: false
+  };
 
   // ---------- state ----------
   const state = {
@@ -75,52 +90,210 @@
     return `<span class="thinking" aria-label="thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></span>`;
   }
 
-  // ---------- one-reading-per-day gate ----------
-  // Use the seeker's local calendar date (YYYY-MM-DD). If they've already had
-  // a reading today, the Begin button is hidden and Madame speaks in-character
-  // about returning tomorrow.
-  function todayLocalISO() {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
+  // ---------- server calls ----------
+  async function api(path, body) {
+    const res = await fetch(API_BASE + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Madame-App-Key": APP_KEY },
+      body: JSON.stringify(body || {})
+    });
+    let data = null;
+    try { data = await res.json(); } catch {}
+    return { ok: res.ok, status: res.status, data: data || {} };
   }
-  function lastReadingDate() {
-    try { return localStorage.getItem(LAST_READING_KEY) || null; }
-    catch { return null; }
+
+  function setBalance(n) {
+    if (typeof n === "number" && isFinite(n)) account.balance = n;
   }
-  function markReadingCompleteToday() {
-    try { localStorage.setItem(LAST_READING_KEY, todayLocalISO()); }
-    catch { /* private mode, etc. — gate silently disabled */ }
-  }
-  function hasReadingToday() {
-    if (!DAILY_LIMIT_ENABLED) return false;
-    return lastReadingDate() === todayLocalISO();
-  }
+
+  // ---------- start-screen gate ----------
+  // Decides what the start screen shows: the Begin button + readings left,
+  // or Madame explaining why we can't begin (loading, out of readings,
+  // offline, or this is the website rather than the app).
   function applyStartGate() {
-    const gate   = $("#start-gate");
-    const gateMsg = $("#gate-message");
+    const gate     = $("#start-gate");
+    const gateMsg  = $("#gate-message");
     const beginBtn = $("#begin-btn");
+    const left     = $("#readings-left");
+    const buyBtn   = $("#buy-btn");
+    const retryBtn = $("#retry-btn");
+    const store    = $("#store-link");
     if (!gate || !beginBtn) return;
-    if (hasReadingToday()) {
+
+    const showGate = (msg, { buy = false, retry = false, storeLink = false } = {}) => {
       beginBtn.style.display = "none";
+      left.textContent = "";
       gate.style.display = "block";
-      gateMsg.textContent =
-        "The cards have already spoken for you today, dear one. Their voices grow quiet once a reading has been given — they must rest, and so must you. Return to me tomorrow, when the veil has turned again, and we shall see what new light the deck carries.";
-    } else {
-      beginBtn.style.display = "";
-      gate.style.display = "none";
-      if (gateMsg) gateMsg.textContent = "";
+      if (gateMsg.dataset.msg !== msg) {
+        gateMsg.dataset.msg = msg;
+        if (msg.startsWith("<")) gateMsg.innerHTML = msg; else gateMsg.textContent = msg;
+      }
+      buyBtn.style.display   = buy ? "" : "none";
+      retryBtn.style.display = retry ? "" : "none";
+      store.style.display    = storeLink ? "" : "none";
+      buyBtn.textContent = `100 More Readings · ${account.refillPrice}`;
+      buyBtn.disabled = account.buying;
+    };
+
+    if (account.status === "web") {
+      store.href = APPSTORE_URL;
+      return showGate(
+        "My parlor has moved, dear seeker. You will find me now in the Madame Celandra app on the Amazon Appstore — the candles are lit and the deck is waiting.",
+        { storeLink: true }
+      );
     }
+    if (account.status === "loading") {
+      return showGate(thinkingHTML());
+    }
+    if (account.status === "error") {
+      return showGate(
+        "The candles will not catch just now — I cannot reach my parlor. Check that you are connected, and try again.",
+        { retry: true }
+      );
+    }
+    if (!account.balance || account.balance <= 0) {
+      return showGate(
+        "Your readings are spent, dear one — the deck has given all it held for you. If you wish to sit at my table again, a fresh bundle of one hundred readings awaits.",
+        { buy: true }
+      );
+    }
+
+    gate.style.display = "none";
+    gateMsg.textContent = "";
+    gateMsg.dataset.msg = "";
+    beginBtn.style.display = "";
+    left.textContent = account.balance === 1
+      ? "1 reading remaining"
+      : `${account.balance} readings remaining`;
+  }
+
+  // ---------- account bootstrap (native app) ----------
+  async function initAccount() {
+    if (!IS_NATIVE) {
+      account.status = "web";
+      applyStartGate();
+      return;
+    }
+    account.status = "loading";
+    applyStartGate();
+    try {
+      const iap = Iap();
+      if (!iap) throw new Error("Amazon In-App Purchasing is unavailable.");
+      const ud = await iap.getUserData();
+      if (!ud?.userId) throw new Error("No Amazon user.");
+      account.userId = ud.userId;
+
+      const r = await api("/api/account", { userId: ud.userId, marketplace: ud.marketplace });
+      if (!r.ok) throw new Error(r.data.error || `HTTP ${r.status}`);
+      setBalance(r.data.balance);
+      account.status = "ready";
+    } catch (err) {
+      console.error("[Madame Celandra] account init failed:", err);
+      account.status = "error";
+    }
+    applyStartGate();
+
+    if (account.status === "ready") {
+      loadRefillPrice();
+      recoverPurchases();
+    }
+  }
+
+  async function loadRefillPrice() {
+    try {
+      const r = await Iap().getProductData({ skus: [REFILL_SKU] });
+      const price = r?.products?.[REFILL_SKU]?.price;
+      if (price) { account.refillPrice = price; applyStartGate(); }
+    } catch (err) {
+      console.warn("[Madame Celandra] price lookup failed:", err);
+    }
+  }
+
+  // Credit a purchase on the server, then tell Amazon it's fulfilled.
+  // If the server can't be reached we leave it unfulfilled — Amazon will
+  // hand it back via getPurchaseUpdates next launch and we try again.
+  async function fulfillReceipt(receiptId) {
+    const r = await api("/api/purchase", { userId: account.userId, receiptId });
+    if (r.ok) {
+      setBalance(r.data.balance);
+      await Iap().notifyFulfillment({ receiptId, result: "FULFILLED" });
+      return true;
+    }
+    if (r.data && r.data.permanent) {
+      await Iap().notifyFulfillment({ receiptId, result: "UNAVAILABLE" });
+    }
+    throw new Error(r.data.error || `HTTP ${r.status}`);
+  }
+
+  async function recoverPurchases() {
+    try {
+      let more = true, guard = 0;
+      while (more && guard++ < 10) {
+        const u = await Iap().getPurchaseUpdates({ reset: false });
+        for (const rc of (u?.receipts || [])) {
+          if (rc.sku !== REFILL_SKU || rc.canceled) continue;
+          try { await fulfillReceipt(rc.receiptId); }
+          catch (err) { console.warn("[Madame Celandra] could not fulfil pending purchase:", err); }
+        }
+        more = !!u?.hasMore;
+      }
+      applyStartGate();
+    } catch (err) {
+      console.warn("[Madame Celandra] purchase recovery failed:", err);
+    }
+  }
+
+  async function buyRefill() {
+    if (account.buying) return;
+    account.buying = true;
+    applyStartGate();
+    const gateMsg = $("#gate-message");
+    const say = (t) => { gateMsg.dataset.msg = t; gateMsg.textContent = t; };
+    try {
+      let r;
+      try {
+        r = await Iap().purchase({ sku: REFILL_SKU });
+      } catch (err) {
+        console.error("[Madame Celandra] purchase failed:", err);
+        say("The Appstore would not open its doors just now. Try again in a little while.");
+        return;
+      }
+      if (r?.status === "SUCCESSFUL" && r.receiptId) {
+        gateMsg.dataset.msg = "";
+        gateMsg.innerHTML = thinkingHTML();
+        try {
+          await fulfillReceipt(r.receiptId);
+        } catch (err) {
+          console.error("[Madame Celandra] fulfilment failed:", err);
+          say("Your offering was received, but the cards have not yet caught up. Reopen me in a moment and your readings will be waiting.");
+          return;
+        }
+      } else if (r?.status === "PENDING") {
+        say("Your offering is on its way, dear one. The moment it arrives, the deck will be yours again.");
+        return;
+      } else if (r?.status !== "FAILED") {
+        // FAILED usually just means the seeker closed the purchase window.
+        say("The Appstore would not open its doors just now. Try again in a little while.");
+        return;
+      }
+    } finally {
+      account.buying = false;
+      $("#buy-btn").disabled = false;
+    }
+    applyStartGate();
   }
 
   // ---------- Anthropic call (via server proxy) ----------
   async function askMadame({ userPrompt, maxTokens = 600 }) {
-    const res = await fetch(MADAME_URL, {
+    const res = await fetch(API_BASE + "/api/madame", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: userPrompt, max_tokens: maxTokens })
+      headers: { "Content-Type": "application/json", "X-Madame-App-Key": APP_KEY },
+      body: JSON.stringify({
+        prompt: userPrompt,
+        max_tokens: maxTokens,
+        userId: account.userId,
+        sessionId: account.sessionId
+      })
     });
 
     if (!res.ok) {
@@ -147,10 +320,15 @@
         }
       }
       if (res.status === 429) msg = "The cards need a moment — too many readings just now. Try again in a bit.";
+      if (res.status === 402) {
+        setBalance(0);
+        msg = "Your readings are spent, dear one.";
+      }
       throw new Error(msg);
     }
 
     const data = await res.json();
+    setBalance(data?.balance);
     const cleaned = scrubMadameText((data?.text || "").trim());
     return cleaned || "…the cards are silent just now.";
   }
@@ -277,16 +455,35 @@
 
   // 1) start
   function wireStart() {
-    $("#begin-btn").addEventListener("click", async () => {
+    const beginBtn = $("#begin-btn");
+    beginBtn.addEventListener("click", async () => {
       hapticMedium();
-      // Re-check at click time in case midnight rolled over mid-session.
-      if (hasReadingToday()) {
+      if (account.status !== "ready" || !(account.balance > 0)) {
         applyStartGate();
         return;
+      }
+      // Open a reading session. One reading is spent once the seeker
+      // asks their question (the greeting itself is free).
+      beginBtn.disabled = true;
+      try {
+        const r = await api("/api/session", { userId: account.userId });
+        if (r.status === 402) { setBalance(0); applyStartGate(); return; }
+        if (!r.ok) throw new Error(r.data.error || `HTTP ${r.status}`);
+        account.sessionId = r.data.sessionId;
+        setBalance(r.data.balance);
+      } catch (err) {
+        console.error("[Madame Celandra] could not open a reading:", err);
+        account.status = "error";
+        applyStartGate();
+        return;
+      } finally {
+        beginBtn.disabled = false;
       }
       resetReading();
       await goToQuestion();
     });
+    $("#buy-btn").addEventListener("click", () => { hapticLight(); buyRefill(); });
+    $("#retry-btn").addEventListener("click", () => { hapticLight(); initAccount(); });
   }
 
   function resetReading() {
@@ -586,8 +783,8 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
       }
     );
     state.summary = text;
-    // The reading has now been delivered — lock this seeker out for the rest of the day.
-    markReadingCompleteToday();
+    // This reading's session is finished; Begin Again opens a fresh one.
+    account.sessionId = null;
   }
 
   // Fallback for a single-card interpretation — only fires when the proxy
@@ -658,7 +855,7 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
     $("#restart-btn").addEventListener("click", () => {
       hapticLight();
       resetReading();
-      applyStartGate();            // they've read today — the gate will now be showing
+      applyStartGate();            // refresh the readings count (or the refill offer)
       showScreen("start-screen");
     });
     $("#download-btn").addEventListener("click", downloadPDF);
@@ -934,7 +1131,7 @@ Speak as Madame Celandra — warm, lyrical, specific, willing to give the cards'
     wireQuestion();
     wireCardScreen();
     wireSummary();
-    applyStartGate();
+    initAccount();
   }
 
   if (document.readyState === "loading") {

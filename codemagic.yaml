@@ -8,10 +8,20 @@ workflows:
     environment:
       android_signing:
         - madame_celandra_keystore
+      groups:
+        - madame_secrets          # holds MADAME_APP_KEY (must match APP_KEY in Cloudflare)
       node: 22.22.0
       vars:
         PACKAGE_NAME: "com.madamecelandra.app"
     scripts:
+      - name: Check secrets
+        script: |
+          if [ -z "$MADAME_APP_KEY" ]; then
+            echo "MADAME_APP_KEY is missing. Add it to the madame_secrets group in Codemagic."; exit 1
+          fi
+          if [ ! -f android/app/src/main/assets/AppstoreAuthenticationKey.pem ]; then
+            echo "android/app/src/main/assets/AppstoreAuthenticationKey.pem is missing (download it from the Amazon Developer Console)."; exit 1
+          fi
       - name: Install dependencies
         script: npm install
       - name: Build web assets into www/
