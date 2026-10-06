@@ -24,7 +24,7 @@
   const Iap = () => window.Capacitor?.Plugins?.AmazonIap;
 
   const account = {
-    status: "loading",   // loading | ready | error | web
+    status: "loading",   // loading | ready | error | web | unlicensed
     userId: null,
     balance: null,
     sessionId: null,
@@ -145,6 +145,13 @@
     if (account.status === "loading") {
       return showGate(thinkingHTML());
     }
+    if (account.status === "unlicensed") {
+      store.href = APPSTORE_URL;
+      return showGate(
+        "The cards do not recognise this copy of my parlor, dear seeker. Please install Madame Celandra from the Amazon Appstore, and I shall be glad to read for you.",
+        { storeLink: true }
+      );
+    }
     if (account.status === "error") {
       return showGate(
         "The candles will not catch just now — I cannot reach my parlor. Check that you are connected, and try again.",
@@ -179,6 +186,20 @@
     try {
       const iap = Iap();
       if (!iap) throw new Error("Amazon In-App Purchasing is unavailable.");
+
+      // Amazon DRM: confirm this Amazon account owns the app. Only a definite
+      // NOT_LICENSED / EXPIRED blocks; network or verification hiccups let a
+      // real buyer through rather than locking them out.
+      try {
+        const lic = await iap.verifyLicense();
+        if (lic?.status === "NOT_LICENSED" || lic?.status === "EXPIRED") {
+          account.status = "unlicensed";
+          applyStartGate();
+          return;
+        }
+      } catch (err) {
+        console.warn("[Madame Celandra] license check failed:", err);
+      }
       const ud = await iap.getUserData();
       if (!ud?.userId) throw new Error("No Amazon user.");
       account.userId = ud.userId;

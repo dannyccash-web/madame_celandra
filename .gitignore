@@ -24,3 +24,7 @@ www/
 signing/
 *.keystore
 *.jks
+
+# Built app files
+*.apk
+*.aab

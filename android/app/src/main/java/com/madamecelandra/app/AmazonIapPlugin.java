@@ -2,6 +2,9 @@ package com.madamecelandra.app;
 
 import android.util.Log;
 
+import com.amazon.device.drm.LicensingListener;
+import com.amazon.device.drm.LicensingService;
+import com.amazon.device.drm.model.LicenseResponse;
 import com.amazon.device.iap.PurchasingListener;
 import com.amazon.device.iap.PurchasingService;
 import com.amazon.device.iap.model.FulfillmentResult;
@@ -37,6 +40,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *   purchase({ sku })                → { status, receiptId?, sku?, userId? }
  *   getPurchaseUpdates({ reset })    → { userId, hasMore, receipts: [{ receiptId, sku, canceled }] }
  *   notifyFulfillment({ receiptId, result })   result = FULFILLED | UNAVAILABLE
+ *   verifyLicense()                  → { status }  LICENSED | NOT_LICENSED | EXPIRED | ERROR_* | UNKNOWN_ERROR
+ *
+ * verifyLicense is Amazon DRM for apps that use the Appstore SDK (the console's
+ * "apply DRM" switch isn't offered to them). It confirms this Amazon account
+ * actually bought the app.
  */
 @CapacitorPlugin(name = "AmazonIap")
 public class AmazonIapPlugin extends Plugin implements PurchasingListener {
@@ -125,6 +133,25 @@ public class AmazonIapPlugin extends Plugin implements PurchasingListener {
         }
         PurchasingService.notifyFulfillment(receiptId, fr);
         call.resolve();
+    }
+
+    @PluginMethod
+    public void verifyLicense(PluginCall call) {
+        try {
+            LicensingService.verifyLicense(getContext().getApplicationContext(), new LicensingListener() {
+                @Override
+                public void onLicenseCommandResponse(LicenseResponse response) {
+                    JSObject ret = new JSObject();
+                    ret.put("status", String.valueOf(response.getRequestStatus()));
+                    call.resolve(ret);
+                }
+            });
+        } catch (Exception e) {
+            JSObject ret = new JSObject();
+            ret.put("status", "UNKNOWN_ERROR");
+            ret.put("error", String.valueOf(e.getMessage()));
+            call.resolve(ret);
+        }
     }
 
     // ---------- Amazon listener callbacks ----------
