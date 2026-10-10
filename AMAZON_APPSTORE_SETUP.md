@@ -87,7 +87,7 @@
 
 **Pricing tab:**
 - Set to **Paid**
-- Price: **$3.99** (includes 200 readings)
+- Price: **Free** (includes 3 readings; $1.99 IAP adds 100). Was $3.99/200 readings in v1.0.
 - Apply Amazon DRM: **Yes**
 - Amazon automatically handles international pricing
 

@@ -21,7 +21,7 @@ export async function onRequestPost({ request, env }) {
   if (!userId || !receiptId) return json(400, { error: "`userId` and `receiptId` are required." });
 
   await ensureSchema(env.DB);
-  const acct = await getOrCreateAccount(env.DB, request, userId, null, env.MAX_NEW_ACCOUNTS_PER_DAY);
+  const acct = await getOrCreateAccount(env.DB, request, userId, null, env.MAX_NEW_ACCOUNTS_PER_DAY, body?.edition === "free" ? "free" : "paid");
   if (acct.error) return acct.error;
 
   const v = await verifyAmazonReceipt(env, userId, receiptId);

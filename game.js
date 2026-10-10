@@ -15,16 +15,18 @@
   const APP_KEY = (window.MADAME_CONFIG && window.MADAME_CONFIG.appKey) || "";
 
   // ---------- readings & purchases ----------
-  // The app is a paid download that includes 200 readings. When they run
+  // The app is a free download that includes 3 readings. When they run
   // out, the seeker can buy 100 more through Amazon In-App Purchasing.
+  // EDITION tells the server which starting allowance a new account gets.
   // The server (functions/api/*) keeps the real count; the app only shows it.
+  const EDITION = "free";
   const REFILL_SKU = "madame_readings_100";
   const REFILL_FALLBACK_PRICE = "$1.99";
   const APPSTORE_URL = "https://www.amazon.com/gp/mas/dl/android?p=com.madamecelandra.app";
   const Iap = () => window.Capacitor?.Plugins?.AmazonIap;
 
   const account = {
-    status: "loading",   // loading | ready | error | web | unlicensed
+    status: "loading",   // loading | ready | error | web
     userId: null,
     balance: null,
     sessionId: null,
@@ -145,13 +147,6 @@
     if (account.status === "loading") {
       return showGate(thinkingHTML());
     }
-    if (account.status === "unlicensed") {
-      store.href = APPSTORE_URL;
-      return showGate(
-        "The cards do not recognise this copy of my parlor, dear seeker. Please install Madame Celandra from the Amazon Appstore, and I shall be glad to read for you.",
-        { storeLink: true }
-      );
-    }
     if (account.status === "error") {
       return showGate(
         "The candles will not catch just now — I cannot reach my parlor. Check that you are connected, and try again.",
@@ -187,24 +182,11 @@
       const iap = Iap();
       if (!iap) throw new Error("Amazon In-App Purchasing is unavailable.");
 
-      // Amazon DRM: confirm this Amazon account owns the app. Only a definite
-      // NOT_LICENSED / EXPIRED blocks; network or verification hiccups let a
-      // real buyer through rather than locking them out.
-      try {
-        const lic = await iap.verifyLicense();
-        if (lic?.status === "NOT_LICENSED" || lic?.status === "EXPIRED") {
-          account.status = "unlicensed";
-          applyStartGate();
-          return;
-        }
-      } catch (err) {
-        console.warn("[Madame Celandra] license check failed:", err);
-      }
       const ud = await iap.getUserData();
       if (!ud?.userId) throw new Error("No Amazon user.");
       account.userId = ud.userId;
 
-      const r = await api("/api/account", { userId: ud.userId, marketplace: ud.marketplace });
+      const r = await api("/api/account", { userId: ud.userId, marketplace: ud.marketplace, edition: EDITION });
       if (!r.ok) throw new Error(r.data.error || `HTTP ${r.status}`);
       setBalance(r.data.balance);
       account.status = "ready";
@@ -234,7 +216,7 @@
   // If the server can't be reached we leave it unfulfilled — Amazon will
   // hand it back via getPurchaseUpdates next launch and we try again.
   async function fulfillReceipt(receiptId) {
-    const r = await api("/api/purchase", { userId: account.userId, receiptId });
+    const r = await api("/api/purchase", { userId: account.userId, receiptId, edition: EDITION });
     if (r.ok) {
       setBalance(r.data.balance);
       await Iap().notifyFulfillment({ receiptId, result: "FULFILLED" });

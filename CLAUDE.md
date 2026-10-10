@@ -46,7 +46,7 @@ Cloudflare auto-deploys within ~1 minute of push. Danny never needs to touch Ter
 Full card definitions with lore in `custom_tarot_deck_card_definitions.txt`.
 
 ## Readings & purchases (see PRICING.md)
-- Paid app ($3.99) includes 200 readings; consumable IAP `madame_readings_100` ($1.99) adds 100. No daily limit.
+- Free app (v1.1+) includes 3 readings; consumable IAP `madame_readings_100` ($1.99) adds 100. No daily limit. (v1.0 was $3.99 with 200 readings; those buyers still get 200.)
 - Server ledger: Cloudflare D1 (binding `DB`), logic in `lib/credits.js`; endpoints
   `functions/api/account.js`, `session.js`, `purchase.js`, and `madame.js` (now requires a session).
 - Cloudflare env: `ANTHROPIC_API_KEY`, `APP_KEY`, `AMAZON_SHARED_SECRET`, optional `AMAZON_RVS_SANDBOX=true` while testing.
